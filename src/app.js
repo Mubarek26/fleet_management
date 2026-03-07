@@ -5,6 +5,8 @@ const dotenv = require("dotenv");
 const path = require("path");
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./config/swagger');
 
 dotenv.config();
 
@@ -90,6 +92,8 @@ app.get("/health", (req, res) => {
 app.get("/favicon.ico", (req, res) => {
 	res.status(204).end();
 });
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 
 app.all("*", (req, res, next) => {

@@ -2,6 +2,7 @@
 // db.js
 const path = require('path');
 const mongoose = require('mongoose');
+const ensureSuperAdmin = require('./seedSuperAdmin');
 require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 
 
