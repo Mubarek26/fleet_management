@@ -12,6 +12,15 @@ dotenv.config();
 
 const app = express();
 
+const toOrigin = (value) => {
+	if (!value) return null;
+	try {
+		return new URL(value.trim()).origin;
+	} catch (error) {
+		return value.trim();
+	}
+};
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -22,16 +31,18 @@ app.set("trust proxy", 1);
 const frontendOrigins = (process.env.FRONTEND_URLS || process.env.FRONTEND_URL || "")
 	.split(",")
 	.map((origin) => origin.trim())
+	.filter(Boolean)
+	.map(toOrigin)
 	.filter(Boolean);
 
-const allowedOrigins = [
+const allowedOrigins = Array.from(new Set([
 	...frontendOrigins,
 	"http://localhost:3000",
 	"http://localhost:5173",
 	"http://localhost:5174",
 	"http://127.0.0.1:5173",
-	"https://fleet-management-kzif.onrender.com/api/v1"
-];
+	"https://fleet-management-kzif.onrender.com"
+].map(toOrigin).filter(Boolean)));
 
 app.use(
 	cors({
