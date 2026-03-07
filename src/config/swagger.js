@@ -12,8 +12,8 @@ const options = {
     },
     servers: [
       {
-        url: process.env.SWAGGER_SERVER_URL || `http://localhost:${PORT}`,
-        description: 'Local server'
+        url: process.env.SWAGGER_SERVER_URL || '/',
+        description: process.env.SWAGGER_SERVER_URL ? 'Configured server' : 'Same origin server'
       }
     ],
     components: {
