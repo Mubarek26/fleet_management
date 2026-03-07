@@ -6,9 +6,10 @@ const path = require("path");
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
 const swaggerUi = require('swagger-ui-express');
-const swaggerSpec = require('./config/swagger');
 
 dotenv.config();
+
+const swaggerSpec = require('./config/swagger');
 
 const app = express();
 
