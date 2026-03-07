@@ -183,7 +183,7 @@ exports.addDriverToCompany = catchAsync(async (req, res, next) => {
     });
 
 
-})
+}) 
 
 // get company drivers
 exports.getCompanyDrivers = catchAsync(async (req, res, next) => {
@@ -204,6 +204,8 @@ exports.getCompanyDrivers = catchAsync(async (req, res, next) => {
         }
     });
 });
+
+
 
 // update company driver
 exports.updateCompanyDriver = catchAsync(async (req, res, next) => {
@@ -232,6 +234,7 @@ exports.updateCompanyDriver = catchAsync(async (req, res, next) => {
         }
     });
 });
+
 
 exports.createCompanyVehicle = catchAsync(async (req, res, next) => {
     let companyId = req.user?.companyId;
