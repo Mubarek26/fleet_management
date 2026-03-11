@@ -188,9 +188,19 @@ const options = {
         },
         ContractInitiateRequest: {
           type: 'object',
-          required: ['transporterCompanyId'],
+          required: ['transporterCompanyId', 'startDate', 'endDate'],
           properties: {
             transporterCompanyId: { type: 'string', example: '67c9fbd9be8f3b0fbd7d8f10' },
+            startDate: {
+              type: 'string',
+              format: 'date-time',
+              example: '2026-03-15T09:00:00.000Z'
+            },
+            endDate: {
+              type: 'string',
+              format: 'date-time',
+              example: '2026-12-31T18:00:00.000Z'
+            },
             message: {
               type: 'string',
               maxLength: 1000,

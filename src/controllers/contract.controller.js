@@ -12,10 +12,25 @@ exports.initiateContract = catchAsync(async (req, res, next) => {
 		return next(new AppError('Only vendors can initiate partnership requests', 403));
 	}
 
-	const { transporterCompanyId, message } = req.body;
+	const { transporterCompanyId, message, startDate, endDate } = req.body;
 
 	if (!transporterCompanyId) {
 		return next(new AppError('transporterCompanyId is required', 400));
+	}
+
+	if (!startDate || !endDate) {
+		return next(new AppError('startDate and endDate are required', 400));
+	}
+
+	const parsedStartDate = new Date(startDate);
+	const parsedEndDate = new Date(endDate);
+
+	if (Number.isNaN(parsedStartDate.getTime()) || Number.isNaN(parsedEndDate.getTime())) {
+		return next(new AppError('startDate and endDate must be valid dates', 400));
+	}
+
+	if (parsedEndDate < parsedStartDate) {
+		return next(new AppError('endDate must be greater than or equal to startDate', 400));
 	}
 
 	const company = await Company.findById(transporterCompanyId);
@@ -40,9 +55,9 @@ exports.initiateContract = catchAsync(async (req, res, next) => {
 
 	const contract = await Contract.create({
 		vendorId: req.user._id,
-        transporterCompanyId,
-        startDate: new Date(),
-        endDate: new Date(),
+		transporterCompanyId,
+		startDate: parsedStartDate,
+		endDate: parsedEndDate,
 		message,
 	});
 
