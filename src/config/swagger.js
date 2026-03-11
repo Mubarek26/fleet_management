@@ -8,7 +8,7 @@ const options = {
     info: {
       title: 'FYP Backend API',
       version: '1.0.0',
-      description: 'Swagger documentation for finished APIs (currently Company and Auth APIs).'
+      description: 'Swagger documentation for finished APIs including Company, Auth, and Contract APIs.'
     },
     servers: [
       {
@@ -74,6 +74,48 @@ const options = {
             status: { type: 'string', enum: ['ACTIVE', 'INACTIVE', 'MAINTENANCE'], example: 'ACTIVE' },
             active: { type: 'boolean', example: true }
           }
+        },
+        Contract: {
+          type: 'object',
+          required: ['vendorId', 'transporterCompanyId', 'startDate', 'endDate', 'status'],
+          properties: {
+            _id: { type: 'string', example: '67c9fbd9be8f3b0fbd7d8f41' },
+            vendorId: { type: 'string', example: '67c9fbd9be8f3b0fbd7d8f99' },
+            transporterCompanyId: { type: 'string', example: '67c9fbd9be8f3b0fbd7d8f10' },
+            message: { type: 'string', example: 'We would like to partner for recurring deliveries.' },
+            startDate: { type: 'string', format: 'date-time', example: '2026-03-11T08:30:00.000Z' },
+            endDate: { type: 'string', format: 'date-time', example: '2026-12-31T23:59:59.000Z' },
+            commissionRate: { type: 'number', minimum: 0, example: 12.5 },
+            status: {
+              type: 'string',
+              enum: ['PENDING', 'ACCEPTED', 'REJECTED', 'CANCELLED', 'TERMINATED'],
+              example: 'PENDING'
+            },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' }
+          }
+        },
+        ContractPopulated: {
+          allOf: [
+            { $ref: '#/components/schemas/Contract' },
+            {
+              type: 'object',
+              properties: {
+                vendorId: {
+                  oneOf: [
+                    { type: 'string', example: '67c9fbd9be8f3b0fbd7d8f99' },
+                    { $ref: '#/components/schemas/User' }
+                  ]
+                },
+                transporterCompanyId: {
+                  oneOf: [
+                    { type: 'string', example: '67c9fbd9be8f3b0fbd7d8f10' },
+                    { $ref: '#/components/schemas/Company' }
+                  ]
+                }
+              }
+            }
+          ]
         },
         CompanyCreateRequest: {
           type: 'object',
@@ -142,6 +184,18 @@ const options = {
             userStatus: { type: 'string', enum: ['PENDING', 'ACTIVE', 'SUSPENDED', 'REJECTED'], example: 'ACTIVE' },
             driverPhoto: { type: 'string', format: 'binary' },
             licensePhoto: { type: 'string', format: 'binary' }
+          }
+        },
+        ContractInitiateRequest: {
+          type: 'object',
+          required: ['transporterCompanyId'],
+          properties: {
+            transporterCompanyId: { type: 'string', example: '67c9fbd9be8f3b0fbd7d8f10' },
+            message: {
+              type: 'string',
+              maxLength: 1000,
+              example: 'We would like to partner with your company for long-term delivery operations.'
+            }
           }
         },
         User: {
@@ -246,7 +300,7 @@ const options = {
       }
     }
   },
-  apis: ['./src/docs/company.swagger.js', './src/docs/auth.swagger.js']
+  apis: ['./src/docs/company.swagger.js', './src/docs/auth.swagger.js', './src/docs/contract.swagger.js']
 };
 
 module.exports = swaggerJsdoc(options);
