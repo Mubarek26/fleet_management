@@ -208,6 +208,146 @@ const options = {
             }
           }
         },
+        MarketplaceOrderLocation: {
+          type: 'object',
+          required: ['address'],
+          properties: {
+            address: { type: 'string', example: 'Bole Road Warehouse 12' },
+            city: { type: 'string', example: 'Addis Ababa' },
+            state: { type: 'string', example: 'Addis Ababa' },
+            country: { type: 'string', example: 'Ethiopia' },
+            latitude: { type: 'number', example: 8.9806 },
+            longitude: { type: 'number', example: 38.7578 },
+            contactName: { type: 'string', example: 'Abebe Kebede' },
+            contactPhone: { type: 'string', example: '0911223344' }
+          }
+        },
+        MarketplaceCargo: {
+          type: 'object',
+          properties: {
+            type: { type: 'string', example: 'FMCG' },
+            description: { type: 'string', example: 'Cartoned dry goods' },
+            weightKg: { type: 'number', minimum: 0, example: 1800 },
+            quantity: { type: 'number', minimum: 1, example: 120 },
+            unit: { type: 'string', enum: ['ITEM', 'BOX', 'PALLET', 'TON'], example: 'BOX' },
+            specialHandling: {
+              type: 'array',
+              items: { type: 'string' },
+              example: ['Keep dry']
+            }
+          }
+        },
+        MarketplaceVehicleRequirements: {
+          type: 'object',
+          properties: {
+            vehicleType: { type: 'string', example: 'BOX_TRUCK' },
+            minimumCapacityKg: { type: 'number', minimum: 0, example: 2000 }
+          }
+        },
+        MarketplacePricing: {
+          type: 'object',
+          properties: {
+            proposedBudget: { type: 'number', minimum: 0, example: 25000 },
+            currency: { type: 'string', example: 'ETB' },
+            paymentMethod: {
+              type: 'string',
+              enum: ['CASH', 'BANK_TRANSFER', 'WALLET', 'CARD'],
+              example: 'BANK_TRANSFER'
+            },
+            negotiable: { type: 'boolean', example: true }
+          }
+        },
+        MarketplaceOrder: {
+          type: 'object',
+          properties: {
+            _id: { type: 'string', example: '67cf77b1be8f3b0fbd7d8fa1' },
+            orderNumber: { type: 'string', example: 'ORD-1741780825481-AB12CD' },
+            createdBy: {
+              oneOf: [
+                { type: 'string', example: '67c9fbd9be8f3b0fbd7d8f99' },
+                { $ref: '#/components/schemas/User' }
+              ]
+            },
+            assignmentMode: {
+              type: 'string',
+              enum: ['DIRECT_COMPANY', 'DIRECT_PRIVATE_TRANSPORTER', 'OPEN_MARKETPLACE'],
+              example: 'OPEN_MARKETPLACE'
+            },
+            targetCompanyId: {
+              oneOf: [
+                { type: 'string', nullable: true, example: null },
+                { $ref: '#/components/schemas/Company' }
+              ]
+            },
+            targetTransporterId: {
+              oneOf: [
+                { type: 'string', nullable: true, example: null },
+                { $ref: '#/components/schemas/User' }
+              ]
+            },
+            channel: { type: 'string', enum: ['MARKETPLACE'], example: 'MARKETPLACE' },
+            status: {
+              type: 'string',
+              enum: ['OPEN', 'MATCHED', 'ASSIGNED', 'IN_TRANSIT', 'DELIVERED', 'CANCELLED'],
+              example: 'OPEN'
+            },
+            title: { type: 'string', example: 'Addis to Adama FMCG delivery' },
+            description: { type: 'string', example: 'Deliver 120 boxes of packaged goods.' },
+            pickupLocation: { $ref: '#/components/schemas/MarketplaceOrderLocation' },
+            deliveryLocation: { $ref: '#/components/schemas/MarketplaceOrderLocation' },
+            cargo: { $ref: '#/components/schemas/MarketplaceCargo' },
+            vehicleRequirements: { $ref: '#/components/schemas/MarketplaceVehicleRequirements' },
+            pickupDate: { type: 'string', format: 'date-time' },
+            deliveryDeadline: { type: 'string', format: 'date-time', nullable: true },
+            pricing: { $ref: '#/components/schemas/MarketplacePricing' },
+            specialInstructions: { type: 'string', example: 'Driver should call before arrival.' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' }
+          }
+        },
+        MarketplaceOrderCreateRequest: {
+          type: 'object',
+          required: ['title', 'pickupLocation', 'deliveryLocation', 'pickupDate', 'proposedBudget'],
+          properties: {
+            assignmentMode: {
+              type: 'string',
+              enum: ['DIRECT_COMPANY', 'DIRECT_PRIVATE_TRANSPORTER', 'OPEN_MARKETPLACE'],
+              example: 'OPEN_MARKETPLACE',
+              description: 'OPEN_MARKETPLACE makes the order visible to both transporter companies and private transporters.'
+            },
+            targetCompanyId: {
+              type: 'string',
+              example: '67c9fbd9be8f3b0fbd7d8f10',
+              description: 'Required when assignmentMode is DIRECT_COMPANY.'
+            },
+            targetTransporterId: {
+              type: 'string',
+              example: '67c9fbd9be8f3b0fbd7d8f11',
+              description: 'Required when assignmentMode is DIRECT_PRIVATE_TRANSPORTER.'
+            },
+            title: { type: 'string', example: 'Addis to Adama FMCG delivery' },
+            description: { type: 'string', example: 'Deliver 120 boxes of packaged goods.' },
+            pickupLocation: { $ref: '#/components/schemas/MarketplaceOrderLocation' },
+            deliveryLocation: { $ref: '#/components/schemas/MarketplaceOrderLocation' },
+            cargo: { $ref: '#/components/schemas/MarketplaceCargo' },
+            vehicleRequirements: { $ref: '#/components/schemas/MarketplaceVehicleRequirements' },
+            pickupDate: { type: 'string', format: 'date-time', example: '2026-03-15T08:00:00.000Z' },
+            deliveryDeadline: {
+              type: 'string',
+              format: 'date-time',
+              example: '2026-03-16T18:00:00.000Z'
+            },
+            proposedBudget: { type: 'number', minimum: 0, example: 25000 },
+            currency: { type: 'string', example: 'ETB' },
+            paymentMethod: {
+              type: 'string',
+              enum: ['CASH', 'BANK_TRANSFER', 'WALLET', 'CARD'],
+              example: 'BANK_TRANSFER'
+            },
+            negotiable: { type: 'boolean', example: true },
+            specialInstructions: { type: 'string', example: 'Driver should call before arrival.' }
+          }
+        },
         User: {
           type: 'object',
           properties: {
@@ -310,7 +450,7 @@ const options = {
       }
     }
   },
-  apis: ['./src/docs/company.swagger.js', './src/docs/auth.swagger.js', './src/docs/contract.swagger.js']
+  apis: ['./src/docs/company.swagger.js', './src/docs/auth.swagger.js', './src/docs/contract.swagger.js', './src/docs/order.swagger.js']
 };
 
 module.exports = swaggerJsdoc(options);
