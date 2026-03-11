@@ -44,7 +44,7 @@ const allowedOrigins = Array.from(new Set([
 	"http://127.0.0.1:5173",
 	"https://fleet-management-kzif.onrender.com",
 	"https://fleet-management-kzif.onrender.com/api/v1",
-
+	"https://fleet-command-center-21.vercel.app"
 ].map(toOrigin).filter(Boolean)));
 
 app.use(
