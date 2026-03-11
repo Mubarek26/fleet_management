@@ -10,7 +10,7 @@
  * /api/v1/contract/initiate:
  *   post:
  *     summary: Initiate a partnership contract request
- *     description: Allows a VENDOR to send a partnership request to an active transporter company. The backend only accepts `transporterCompanyId` and optional `message` in the request body. Contract fields such as `vendorId`, `startDate`, `endDate`, `commissionRate`, and `status` are generated or managed by the server.
+ *     description: Allows a VENDOR to send a partnership request to an active transporter company. The frontend must provide `transporterCompanyId`, `startDate`, and `endDate`. The backend sets `vendorId`, `commissionRate`, and `status`.
  *     tags: [Contract]
  *     security:
  *       - bearerAuth: []
@@ -19,21 +19,11 @@
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required:
- *               - transporterCompanyId
- *             properties:
- *               transporterCompanyId:
- *                 type: string
- *                 description: MongoDB id of the transporter company to receive the partnership request
- *                 example: 67c9fbd9be8f3b0fbd7d8f10
- *               message:
- *                 type: string
- *                 maxLength: 1000
- *                 description: Optional message sent with the partnership request
- *                 example: We would like to partner with your company for long-term delivery operations.
+ *             $ref: '#/components/schemas/ContractInitiateRequest'
  *           example:
  *             transporterCompanyId: 67c9fbd9be8f3b0fbd7d8f10
+ *             startDate: 2026-03-15T09:00:00.000Z
+ *             endDate: 2026-12-31T18:00:00.000Z
  *             message: We would like to partner with your company for long-term delivery operations.
  *     responses:
  *       201:
@@ -55,7 +45,7 @@
  *                     contract:
  *                       $ref: '#/components/schemas/ContractPopulated'
  *       400:
- *         description: Missing required transporter company id
+ *         description: Missing required fields or invalid dates
  *         content:
  *           application/json:
  *             schema:
