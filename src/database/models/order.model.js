@@ -164,8 +164,8 @@ const orderSchema = new mongoose.Schema(
 		},
 		status: {
 			type: String,
-			enum: ['OPEN', 'MATCHED', 'ASSIGNED', 'IN_TRANSIT', 'DELIVERED', 'CANCELLED'],
-			default: 'OPEN',
+			enum: ['PENDING','REJECTED','OPEN', 'MATCHED', 'ASSIGNED', 'IN_TRANSIT', 'DELIVERED', 'CANCELLED'],
+			default: 'PENDING',
         },
         postStatus: {
             type: String,

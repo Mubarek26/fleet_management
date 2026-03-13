@@ -2,9 +2,26 @@
 const Order = require('../database/models/order.model');
 const Company = require('../database/models/company.model');
 const User = require('../database/models/user.model');
+const brokerService = require('./broker.service');
 const AppError = require('../utils/appError');
 
 const ALLOWED_CREATOR_ROLES = ['SHIPPER', 'VENDOR', 'BROKER', 'SUPER_ADMIN'];
+const ALLOWED_MARKETPLACE_VIEWER_ROLES = ['COMPANY_ADMIN', 'PRIVATE_TRANSPORTER', 'SUPER_ADMIN'];
+
+const orderPopulate = [
+	{
+		path: 'createdBy',
+		select: 'fullName email phoneNumber role status',
+	},
+	{
+		path: 'targetCompanyId',
+		select: 'companyName email phoneNumber status active',
+	},
+	{
+		path: 'targetTransporterId',
+		select: 'fullName email phoneNumber role status active companyId',
+	},
+];
 
 const normalizeText = (value) => {
 	if (value === undefined || value === null) return null;
@@ -100,6 +117,86 @@ const normalizeLocation = (location, fieldName, fallbackContact = {}) => {
 		contactName: normalizeText(location.contactName) || fallbackContact.contactName || null,
 		contactPhone: normalizeText(location.contactPhone) || fallbackContact.contactPhone || null,
 	};
+};
+
+exports.getCreatorOrders = async (user, query = {}) => {
+	if (!user?._id) {
+		throw new AppError('You must be logged in to view your created orders', 401);
+	}
+
+	const filter = {
+		createdBy: user._id,
+	};
+
+	const status = normalizeText(query.status)?.toUpperCase();
+	if (status) {
+		filter.status = status;
+	}
+
+	const postStatus = normalizeText(query.postStatus)?.toUpperCase();
+	if (postStatus) {
+		filter.postStatus = postStatus;
+	}
+
+	const assignmentMode = normalizeText(query.assignmentMode)?.toUpperCase();
+	if (assignmentMode) {
+		filter.assignmentMode = assignmentMode;
+	}
+
+	const orders = await Order.find(filter)
+		.populate(orderPopulate)
+		.sort({ createdAt: -1 });
+
+	return orders;
+};
+
+exports.getOpenMarketplaceOrders = async (user, query = {}) => {
+	if (!user?._id) {
+		throw new AppError('You must be logged in to view marketplace orders', 401);
+	}
+
+	if (!ALLOWED_MARKETPLACE_VIEWER_ROLES.includes(user.role)) {
+		throw new AppError('Only transporter company admins and private transporters can view marketplace orders', 403);
+	}
+
+	const filter = {
+		assignmentMode: 'OPEN_MARKETPLACE',
+		channel: 'MARKETPLACE',
+		status: 'OPEN',
+		postStatus: 'ACTIVE',
+	};
+
+	const pickupCity = normalizeText(query.pickupCity);
+	if (pickupCity) {
+		filter['pickupLocation.city'] = new RegExp(`^${pickupCity}$`, 'i');
+	}
+
+	const deliveryCity = normalizeText(query.deliveryCity);
+	if (deliveryCity) {
+		filter['deliveryLocation.city'] = new RegExp(`^${deliveryCity}$`, 'i');
+	}
+
+	const vehicleType = normalizeText(query.vehicleType);
+	if (vehicleType) {
+		filter['vehicleRequirements.vehicleType'] = new RegExp(`^${vehicleType}$`, 'i');
+	}
+
+	const search = normalizeText(query.search);
+	if (search) {
+		filter.$or = [
+			{ title: new RegExp(search, 'i') },
+			{ description: new RegExp(search, 'i') },
+			{ 'pickupLocation.address': new RegExp(search, 'i') },
+			{ 'deliveryLocation.address': new RegExp(search, 'i') },
+			{ 'cargo.type': new RegExp(search, 'i') },
+		];
+	}
+
+	const orders = await Order.find(filter)
+		.populate(orderPopulate)
+		.sort({ createdAt: -1 });
+
+	return orders;
 };
 
 exports.createMarketplaceOrder = async (user, payload = {}) => {
@@ -199,7 +296,7 @@ exports.createMarketplaceOrder = async (user, payload = {}) => {
 		targetCompanyId: targetCompany?._id || null,
 		targetTransporterId: targetTransporter?._id || null,
 		channel: 'MARKETPLACE',
-		status: 'OPEN',
+		status: 'PENDING',
 		title,
 		description: normalizeText(payload.description),
 		pickupLocation: normalizeLocation(payload.pickupLocation, 'pickupLocation', fallbackContact),
@@ -234,20 +331,20 @@ exports.createMarketplaceOrder = async (user, payload = {}) => {
 		specialInstructions: normalizeText(payload.specialInstructions),
 	});
 
-	await order.populate([
-		{
-			path: 'createdBy',
-			select: 'fullName email phoneNumber role status',
-		},
-		{
-			path: 'targetCompanyId',
-			select: 'companyName email phoneNumber status active',
-		},
-		{
-			path: 'targetTransporterId',
-			select: 'fullName email phoneNumber role status active companyId',
-		},
-	]);
+	try {
+		const autoValidationResult = await brokerService.autoValidateOrderIfEligible(order._id, {
+			autoTriggered: true,
+			validationSource: 'ORDER_CREATE_RULES',
+		});
+
+		if (autoValidationResult?.order) {
+			return autoValidationResult.order;
+		}
+	} catch (error) {
+		// Keep order in PENDING when auto-validation cannot complete.
+	}
+
+	await order.populate(orderPopulate);
 
 	return order;
 };

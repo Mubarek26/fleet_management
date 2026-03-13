@@ -348,6 +348,88 @@ const options = {
             specialInstructions: { type: 'string', example: 'Driver should call before arrival.' }
           }
         },
+        OrderProposal: {
+          type: 'object',
+          properties: {
+            _id: { type: 'string', example: '67cf77b1be8f3b0fbd7d8fb2' },
+            orderId: {
+              oneOf: [
+                { type: 'string', example: '67cf77b1be8f3b0fbd7d8fa1' },
+                { $ref: '#/components/schemas/MarketplaceOrder' }
+              ]
+            },
+            submittedByUserId: {
+              oneOf: [
+                { type: 'string', example: '67c9fbd9be8f3b0fbd7d8f99' },
+                { $ref: '#/components/schemas/User' }
+              ]
+            },
+            companyId: {
+              oneOf: [
+                { type: 'string', nullable: true, example: null },
+                { $ref: '#/components/schemas/Company' }
+              ]
+            },
+            proposalType: {
+              type: 'string',
+              enum: ['COMPANY', 'PRIVATE_TRANSPORTER'],
+              example: 'COMPANY'
+            },
+            proposedPrice: { type: 'number', minimum: 0, example: 24000 },
+            currency: { type: 'string', example: 'ETB' },
+            message: { type: 'string', example: 'We can pick up within 2 hours.' },
+            estimatedPickupDate: { type: 'string', format: 'date-time', nullable: true },
+            vehicleDetails: { type: 'string', example: '5 ton box truck available.' },
+            status: {
+              type: 'string',
+              enum: ['PENDING', 'ACCEPTED', 'REJECTED', 'WITHDRAWN'],
+              example: 'PENDING'
+            },
+            reviewedBy: {
+              oneOf: [
+                { type: 'string', nullable: true, example: null },
+                { $ref: '#/components/schemas/User' }
+              ]
+            },
+            reviewedAt: { type: 'string', format: 'date-time', nullable: true },
+            acceptedAt: { type: 'string', format: 'date-time', nullable: true },
+            rejectionReason: { type: 'string', nullable: true, example: null },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' }
+          }
+        },
+        OrderProposalCreateRequest: {
+          type: 'object',
+          properties: {
+            proposedPrice: { type: 'number', minimum: 0, example: 24000 },
+            currency: { type: 'string', example: 'ETB' },
+            message: {
+              type: 'string',
+              maxLength: 1000,
+              example: 'We can pick up within 2 hours and deliver the same day.'
+            },
+            estimatedPickupDate: {
+              type: 'string',
+              format: 'date-time',
+              example: '2026-03-15T10:00:00.000Z'
+            },
+            vehicleDetails: {
+              type: 'string',
+              maxLength: 500,
+              example: '5 ton box truck with two loaders available.'
+            }
+          }
+        },
+        OrderProposalRejectRequest: {
+          type: 'object',
+          properties: {
+            reason: {
+              type: 'string',
+              maxLength: 1000,
+              example: 'Pickup window is too late for this order.'
+            }
+          }
+        },
         User: {
           type: 'object',
           properties: {
@@ -450,7 +532,14 @@ const options = {
       }
     }
   },
-  apis: ['./src/docs/company.swagger.js', './src/docs/auth.swagger.js', './src/docs/contract.swagger.js', './src/docs/order.swagger.js']
+  apis: [
+    './src/docs/company.swagger.js',
+    './src/docs/auth.swagger.js',
+    './src/docs/contract.swagger.js',
+    './src/docs/order.swagger.js',
+    './src/docs/driver.swagger.js',
+    './src/docs/broker.swagger.js'
+  ]
 };
 
 module.exports = swaggerJsdoc(options);
