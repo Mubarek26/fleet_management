@@ -157,6 +157,12 @@ const orderSchema = new mongoose.Schema(
 			default: null,
 			index: true,
 		},
+		assignedVehicleId: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: 'Vehicle',
+			default: null,
+			index: true,
+		},
 		channel: {
 			type: String,
 			enum: ['MARKETPLACE', 'DIRECT'],
