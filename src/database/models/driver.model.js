@@ -47,12 +47,17 @@ const driverSchema = new mongoose.Schema(
         },
     status: {
       type: String,
-      enum: ["PENDING", "ACTIVE", "SUSPENDED"],
+      enum: ["PENDING", "ACTIVE", "SUSPENDED","OFFLINE"],
       default: "ACTIVE",
     },
     active: {
       type: Boolean,
       default: true,
+    },
+    currentVehicleId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Vehicle",
+      default: null,
     },
   },
   { timestamps: true }

@@ -1,5 +1,6 @@
 const app = require('./app');
 const connectDB = require('./config/db');
+const startJobs = require('./jobs');
 
 
 
@@ -10,6 +11,7 @@ let server;
 
 const startServer = async () => {
 	await connectDB();
+	startJobs();
 
 	server = app.listen(PORT, () => {
 		// eslint-disable-next-line no-console

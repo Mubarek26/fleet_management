@@ -39,6 +39,11 @@ const vehicleSchema = new mongoose.Schema(
 			type: Boolean,
 			default: true,
 		},
+		currentDriverId: {
+			type: mongoose.Schema.Types.ObjectId,
+			ref: "Driver",
+			default: null,
+		},
 	},
 	{ timestamps: true }
 );

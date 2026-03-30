@@ -81,7 +81,7 @@ const routesToMount = [
 	{ base: "/api/v1/company", modulePath: "./routes/company.routes", label: "company.routes" },
 	{ base: "/api/v1/contract", modulePath: "./routes/contract.routes", label: "contract.routes" },
 	{ base: "/api/v1/driver", modulePath: "./routes/driver.routes", label: "driver.routes" },
-	{ base: "/api/v1/order", modulePath: "./routes/order.routes", label: "order.routes" },
+	{ base: "/api/v1/orders", modulePath: "./routes/order.routes", label: "order.routes" },
 	{ base: "/api/v1/payment", modulePath: "./routes/payment.routes", label: "payment.routes" },
 	{ base: "/api/v1/rating", modulePath: "./routes/rating.routes", label: "rating.routes" },
 	{ base: "/api/v1/tracking", modulePath: "./routes/tracking.routes", label: "tracking.routes" },
