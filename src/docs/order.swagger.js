@@ -1,5 +1,63 @@
 /**
  * @swagger
+ * /api/v1/orders/{orderId}/assign:
+ *   post:
+ *     summary: Assign a driver and vehicle to an order
+ *     description: Assigns a driver and a vehicle to an order if not already assigned. Only accessible to authorized users (e.g., admin/dispatcher).
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: orderId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the order to assign
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               driverId:
+ *                 type: string
+ *                 description: The ID of the driver to assign
+ *               vehicleId:
+ *                 type: string
+ *                 description: The ID of the vehicle to assign
+ *           example:
+ *             driverId: 64f1c2a7e4b0a2d8f1e12345
+ *             vehicleId: 64f1c2a7e4b0a2d8f1e67890
+ *     responses:
+ *       200:
+ *         description: Order assigned successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 message:
+ *                   type: string
+ *                   example: Order assigned successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     order:
+ *                       $ref: '#/components/schemas/MarketplaceOrder'
+ *       400:
+ *         description: Invalid request or order already assigned
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Order, driver, or vehicle not found
+ */
+/**
+ * @swagger
  * tags:
  *   - name: Orders
  *     description: Marketplace order management endpoints

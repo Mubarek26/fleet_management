@@ -23,3 +23,6 @@ router.patch(
 );
 
 module.exports = router;
+
+// Assign driver and vehicle to order
+router.post('/:orderId/assign', authController.protect, orderController.assignOrder);

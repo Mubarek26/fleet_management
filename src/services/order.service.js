@@ -1,3 +1,31 @@
+// Assign driver and vehicle to order with validation
+exports.assignOrder = async (orderId, driverId, vehicleId) => {
+	if (!orderId || !driverId || !vehicleId) {
+		throw new AppError('orderId, driverId, and vehicleId are required', 400);
+	}
+	const order = await Order.findById(orderId);
+	if (!order) throw new AppError('Order not found', 404);
+	if (order.status === 'ASSIGNED' && order.targetTransporterId && order.assignedVehicleId) {
+		throw new AppError('Order is already assigned to a driver and vehicle', 400);
+	}
+	// Check driver exists and is active
+	const driver = await User.findOne({ _id: driverId, active: true, status: 'ACTIVE' });
+	if (!driver) throw new AppError('Driver not found or inactive', 404);
+	// Check vehicle exists and is active
+	const Vehicle = require('../database/models/vehicle.model');
+	const vehicle = await Vehicle.findOne({ _id: vehicleId, active: true, status: 'ACTIVE' });
+	if (!vehicle) throw new AppError('Vehicle not found or inactive', 404);
+	// Optionally, check vehicle is not already assigned to another order
+	const assignedOrder = await Order.findOne({ assignedVehicleId: vehicleId, status: 'ASSIGNED' });
+	if (assignedOrder) {
+		throw new AppError('Vehicle is already assigned to another order', 400);
+	}
+	order.targetTransporterId = driverId;
+	order.assignedVehicleId = vehicleId;
+	order.status = 'ASSIGNED';
+	await order.save();
+	return order;
+};
 
 const Order = require('../database/models/order.model');
 const Company = require('../database/models/company.model');
