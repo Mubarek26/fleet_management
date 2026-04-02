@@ -133,6 +133,11 @@ const orderSchema = new mongoose.Schema(
 			unique: true,
 			index: true,
 		},
+        assignmentFailureReason: {
+            type: String,
+            trim: true,
+            default: null,
+        },
 		createdBy: {
 			type: mongoose.Schema.Types.ObjectId,
 			ref: 'User',
@@ -170,7 +175,7 @@ const orderSchema = new mongoose.Schema(
 		},
 		status: {
 			type: String,
-			enum: ['PENDING','REJECTED','OPEN', 'MATCHED', 'ASSIGNED', 'IN_TRANSIT', 'DELIVERED', 'CANCELLED'],
+			enum: ['PENDING','ACCEPTED','REJECTED','OPEN', 'MATCHED', 'ASSIGNED', 'IN_TRANSIT', 'DELIVERED', 'CANCELLED'],
 			default: 'PENDING',
         },
         postStatus: {

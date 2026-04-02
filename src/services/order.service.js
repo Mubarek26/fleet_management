@@ -23,6 +23,7 @@ exports.assignOrder = async (orderId, driverId, vehicleId) => {
 	order.targetTransporterId = driverId;
 	order.assignedVehicleId = vehicleId;
 	order.status = 'ASSIGNED';
+	order.assignmentFailureReason = null;
 	await order.save();
 	return order;
 };
@@ -35,6 +36,49 @@ const AppError = require('../utils/appError');
 
 const ALLOWED_CREATOR_ROLES = ['SHIPPER', 'VENDOR', 'BROKER', 'SUPER_ADMIN'];
 const ALLOWED_MARKETPLACE_VIEWER_ROLES = ['COMPANY_ADMIN', 'PRIVATE_TRANSPORTER', 'SUPER_ADMIN'];
+
+// --- COMPANY/SUPERADMIN ORDER ACCEPT/REJECT ---
+exports.acceptOrderByCompany = async (user, orderId) => {
+	if (!user || !user._id) throw new AppError('You must be logged in', 401);
+	if (!['COMPANY_ADMIN', 'SUPER_ADMIN'].includes(user.role)) {
+		throw new AppError('Not authorized', 403);
+	}
+	const order = await Order.findById(orderId);
+	if (!order) throw new AppError('Order not found', 404);
+	if (order.assignmentMode !== 'DIRECT_COMPANY') {
+		throw new AppError('Order is not DIRECT_COMPANY type', 400);
+	}
+	if (user.role === 'COMPANY_ADMIN' && String(order.targetCompanyId) !== String(user.companyId)) {
+		throw new AppError('Order not assigned to your company', 403);
+	}
+	if (order.status !== 'PENDING') {
+		throw new AppError('Order is not pending', 400);
+	}
+	order.status = 'ACCEPTED';
+	await order.save();
+	return order;
+};
+
+exports.rejectOrderByCompany = async (user, orderId) => {
+	if (!user || !user._id) throw new AppError('You must be logged in', 401);
+	if (!['COMPANY_ADMIN', 'SUPER_ADMIN'].includes(user.role)) {
+		throw new AppError('Not authorized', 403);
+	}
+	const order = await Order.findById(orderId);
+	if (!order) throw new AppError('Order not found', 404);
+	if (order.assignmentMode !== 'DIRECT_COMPANY') {
+		throw new AppError('Order is not DIRECT_COMPANY type', 400);
+	}
+	if (user.role === 'COMPANY_ADMIN' && String(order.targetCompanyId) !== String(user.companyId)) {
+		throw new AppError('Order not assigned to your company', 403);
+	}
+	if (order.status !== 'PENDING') {
+		throw new AppError('Order is not pending', 400);
+	}
+	order.status = 'REJECTED';
+	await order.save();
+	return order;
+};
 
 const orderPopulate = [
 	{
@@ -50,6 +94,16 @@ const orderPopulate = [
 		select: 'fullName email phoneNumber role status active companyId',
 	},
 ];
+
+// Utility to include assignmentFailureReason in order responses if needed
+function orderToResponse(order) {
+  if (!order) return order;
+  if (typeof order.toObject === 'function') order = order.toObject();
+  return {
+    ...order,
+    assignmentFailureReason: order.assignmentFailureReason || null,
+  };
+}
 
 const normalizeText = (value) => {
 	if (value === undefined || value === null) return null;
@@ -318,13 +372,22 @@ exports.createMarketplaceOrder = async (user, payload = {}) => {
 		contactPhone: normalizeText(user.phoneNumber),
 	};
 
+
+	// Debug log for assignmentMode and status
+	console.log('[OrderCreate] assignmentMode:', assignmentMode);
+	const status =
+		assignmentMode === 'OPEN_MARKETPLACE'
+			? 'OPEN'
+			: 'PENDING';
+	console.log('[OrderCreate] status to be set:', status);
+
 	const order = await Order.create({
 		createdBy: user._id,
 		assignmentMode,
 		targetCompanyId: targetCompany?._id || null,
 		targetTransporterId: targetTransporter?._id || null,
 		channel: 'MARKETPLACE',
-		status: 'PENDING',
+		status,
 		title,
 		description: normalizeText(payload.description),
 		pickupLocation: normalizeLocation(payload.pickupLocation, 'pickupLocation', fallbackContact),
@@ -358,6 +421,7 @@ exports.createMarketplaceOrder = async (user, payload = {}) => {
 		},
 		specialInstructions: normalizeText(payload.specialInstructions),
 	});
+	console.log('[OrderCreate] created order status:', order.status, 'assignmentMode:', order.assignmentMode, 'orderNumber:', order.orderNumber);
 
 	try {
 		const autoValidationResult = await brokerService.autoValidateOrderIfEligible(order._id, {

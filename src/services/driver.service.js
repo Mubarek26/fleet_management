@@ -79,6 +79,87 @@ const ensureCompanyAccess = (user, resourceCompanyId) => {
 	}
 };
 
+// --- DRIVER ORDER ACTIONS ---
+const ORDER_STATUS = {
+	ASSIGNED: 'ASSIGNED',
+	ACCEPTED: 'ACCEPTED',
+	REJECTED: 'REJECTED',
+	IN_TRANSIT: 'IN_TRANSIT',
+	ARRIVED: 'ARRIVED',
+	DELIVERED: 'DELIVERED',
+};
+
+function assertDriverOwnsOrder(user, order) {
+	if (!order.targetTransporterId || String(order.targetTransporterId) !== String(user._id)) {
+		throw new AppError('You are not assigned to this order', 403);
+	}
+}
+
+exports.acceptOrderAssignment = async (user, orderId) => {
+	assertLoggedIn(user);
+	const order = await Order.findById(orderId);
+	if (!order) throw new AppError('Order not found', 404);
+	assertDriverOwnsOrder(user, order);
+	if (order.status !== ORDER_STATUS.ASSIGNED) {
+		throw new AppError('Order is not in ASSIGNED state', 400);
+	}
+	order.status = ORDER_STATUS.ACCEPTED;
+	await order.save();
+	return order;
+};
+
+exports.rejectOrderAssignment = async (user, orderId) => {
+	assertLoggedIn(user);
+	const order = await Order.findById(orderId);
+	if (!order) throw new AppError('Order not found', 404);
+	assertDriverOwnsOrder(user, order);
+	if (order.status !== ORDER_STATUS.ASSIGNED) {
+		throw new AppError('Order is not in ASSIGNED state', 400);
+	}
+	order.status = ORDER_STATUS.REJECTED;
+	await order.save();
+	return order;
+};
+
+exports.startOrderAssignment = async (user, orderId) => {
+	assertLoggedIn(user);
+	const order = await Order.findById(orderId);
+	if (!order) throw new AppError('Order not found', 404);
+	assertDriverOwnsOrder(user, order);
+	if (![ORDER_STATUS.ACCEPTED, ORDER_STATUS.ASSIGNED].includes(order.status)) {
+		throw new AppError('Order must be accepted or assigned to start', 400);
+	}
+	order.status = ORDER_STATUS.IN_TRANSIT;
+	await order.save();
+	return order;
+};
+
+exports.arriveAtPickup = async (user, orderId) => {
+	assertLoggedIn(user);
+	const order = await Order.findById(orderId);
+	if (!order) throw new AppError('Order not found', 404);
+	assertDriverOwnsOrder(user, order);
+	if (order.status !== ORDER_STATUS.IN_TRANSIT) {
+		throw new AppError('Order must be IN_TRANSIT to arrive at pickup', 400);
+	}
+	order.status = ORDER_STATUS.ARRIVED;
+	await order.save();
+	return order;
+};
+
+exports.completeOrderAssignment = async (user, orderId) => {
+	assertLoggedIn(user);
+	const order = await Order.findById(orderId);
+	if (!order) throw new AppError('Order not found', 404);
+	assertDriverOwnsOrder(user, order);
+	if (order.status !== ORDER_STATUS.ARRIVED) {
+		throw new AppError('Order must be ARRIVED to complete', 400);
+	}
+	order.status = ORDER_STATUS.DELIVERED;
+	await order.save();
+	return order;
+};
+
 const ensureVehicleAssignable = (vehicle) => {
 	if (!vehicle.active || vehicle.status !== 'ACTIVE') {
 		throw new AppError('Vehicle must be active to be assigned', 400);

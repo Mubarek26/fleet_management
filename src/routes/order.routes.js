@@ -22,6 +22,20 @@ router.patch(
 	orderProposalController.rejectProposal
 );
 
+// Company/Superadmin accept/reject order
+router.patch(
+	'/:orderId/accept',
+	authController.protect,
+	authController.restrictTo('COMPANY_ADMIN', 'SUPER_ADMIN'),
+	orderController.acceptOrderByCompany
+);
+router.patch(
+	'/:orderId/reject',
+	authController.protect,
+	authController.restrictTo('COMPANY_ADMIN', 'SUPER_ADMIN'),
+	orderController.rejectOrderByCompany
+);
+
 module.exports = router;
 
 // Assign driver and vehicle to order

@@ -168,7 +168,9 @@ exports.validateOrder = async (user, orderId, payload = {}) => {
 		throw new AppError(`Order failed validation: ${validationErrors.join('; ')}`, 400);
 	}
 
-	order.status = 'OPEN';
+	if (order.assignmentMode === 'OPEN_MARKETPLACE') {
+		order.status = 'OPEN';
+	}
 	await order.save();
 	await order.populate(orderPopulate);
 
@@ -207,7 +209,9 @@ exports.autoValidateOrderIfEligible = async (orderId, payload = {}) => {
 		};
 	}
 
-	order.status = 'OPEN';
+	if (order.assignmentMode === 'OPEN_MARKETPLACE') {
+		order.status = 'OPEN';
+	}
 	await order.save();
 	await order.populate(orderPopulate);
 
@@ -447,6 +451,7 @@ exports.assignOrder = async (user, payload = {}) => {
 	};
 };
 
+
 exports.assignVehicle = async (user, orderId, payload = {}) => {
 	ensureAuthenticated(user);
 	ensureValidOrderId(orderId);
@@ -461,8 +466,8 @@ exports.assignVehicle = async (user, orderId, payload = {}) => {
 		throw new AppError('No order found with that ID', 404);
 	}
 
-	if (!['ASSIGNED'].includes(order.status)) {
-		throw new AppError('Vehicle can only be assigned when order status is ASSIGNED', 400);
+	if (!['ACCEPTED'].includes(order.status)) {
+		throw new AppError('Vehicle can only be assigned when order status is ACCEPTED', 400);
 	}
 
 	if (order.assignmentMode !== 'DIRECT_COMPANY' || !order.targetCompanyId) {
@@ -474,9 +479,15 @@ exports.assignVehicle = async (user, orderId, payload = {}) => {
 		throw new AppError('No vehicle found with that ID', 404);
 	}
 
+
 	if (vehicle.active === false || vehicle.status !== 'ACTIVE') {
 		throw new AppError('Vehicle must be ACTIVE to be assigned', 400);
 	}
+
+	// Set order status to ASSIGNED when vehicle is assigned
+	order.assignedVehicleId = vehicle._id;
+	order.status = 'ASSIGNED';
+	await order.save();
 
 	if (String(vehicle.companyId) !== String(order.targetCompanyId)) {
 		throw new AppError('Selected vehicle does not belong to the assigned company', 400);

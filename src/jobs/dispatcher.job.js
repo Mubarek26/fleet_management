@@ -97,7 +97,7 @@ const runAutoVehicleAssignment = async () => {
 
 	const orders = await Order.find({
 		assignmentMode: 'DIRECT_COMPANY',
-		status: 'ASSIGNED',
+		status: 'ACCEPTED',
 		assignedVehicleId: null,
 		postStatus: 'ACTIVE',
 		targetCompanyId: { $exists: true, $ne: null },
@@ -124,6 +124,10 @@ const runAutoVehicleAssignment = async () => {
 		const vehicle = await selectVehicleForOrder(order, blockedVehicleIds);
 		if (!vehicle) {
 			skipped += 1;
+			// Set assignment failure reason
+			await Order.findByIdAndUpdate(order._id, {
+			  assignmentFailureReason: 'No available vehicle matches requirements',
+			});
 			continue;
 		}
 

@@ -16,6 +16,25 @@ exports.assignOrder = catchAsync(async (req, res, next) => {
 	});
 });
 
+// Company/Superadmin accept/reject order
+exports.acceptOrderByCompany = catchAsync(async (req, res) => {
+	const order = await orderService.acceptOrderByCompany(req.user, req.params.orderId);
+	res.status(200).json({
+		status: 'success',
+		message: 'Order accepted by company',
+		data: { order },
+	});
+});
+
+exports.rejectOrderByCompany = catchAsync(async (req, res) => {
+	const order = await orderService.rejectOrderByCompany(req.user, req.params.orderId);
+	res.status(200).json({
+		status: 'success',
+		message: 'Order rejected by company',
+		data: { order },
+	});
+});
+
 
 exports.getMyCreatedOrders = catchAsync(async (req, res) => {
 	const orders = await orderService.getCreatorOrders(req.user, req.query);
