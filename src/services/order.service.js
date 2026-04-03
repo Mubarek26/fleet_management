@@ -15,14 +15,14 @@ exports.assignOrder = async (orderId, driverId, vehicleId) => {
 	const Vehicle = require('../database/models/vehicle.model');
 	const vehicle = await Vehicle.findOne({ _id: vehicleId, active: true, status: 'ACTIVE' });
 	if (!vehicle) throw new AppError('Vehicle not found or inactive', 404);
-	// Optionally, check vehicle is not already assigned to another order
-	const assignedOrder = await Order.findOne({ assignedVehicleId: vehicleId, status: 'ASSIGNED' });
-	if (assignedOrder) {
+	// Optionally, check vehicle is not already assigned to another order (except this one)
+	const assignedOrder = await Order.findOne({ assignedVehicleId: vehicleId, status: 'ACCEPTED' });
+	if (assignedOrder && String(assignedOrder._id) !== String(orderId)) {
 		throw new AppError('Vehicle is already assigned to another order', 400);
 	}
 	order.targetTransporterId = driverId;
 	order.assignedVehicleId = vehicleId;
-	order.status = 'ASSIGNED';
+	// order.status = 'ASSIGNED';
 	order.assignmentFailureReason = null;
 	await order.save();
 	return order;

@@ -100,10 +100,10 @@ exports.acceptOrderAssignment = async (user, orderId) => {
 	const order = await Order.findById(orderId);
 	if (!order) throw new AppError('Order not found', 404);
 	assertDriverOwnsOrder(user, order);
-	if (order.status !== ORDER_STATUS.ASSIGNED) {
-		throw new AppError('Order is not in ASSIGNED state', 400);
+	if (order.status !== ORDER_STATUS.ACCEPTED) {
+		throw new AppError('Order is not in ACCEPTED state', 400);
 	}
-	order.status = ORDER_STATUS.ACCEPTED;
+	order.status = ORDER_STATUS.ASSIGNED;
 	await order.save();
 	return order;
 };
@@ -113,8 +113,8 @@ exports.rejectOrderAssignment = async (user, orderId) => {
 	const order = await Order.findById(orderId);
 	if (!order) throw new AppError('Order not found', 404);
 	assertDriverOwnsOrder(user, order);
-	if (order.status !== ORDER_STATUS.ASSIGNED) {
-		throw new AppError('Order is not in ASSIGNED state', 400);
+	if (order.status !== ORDER_STATUS.ACCEPTED) {
+		throw new AppError('Order is not in ACCEPTED state', 400);
 	}
 	order.status = ORDER_STATUS.REJECTED;
 	await order.save();

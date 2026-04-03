@@ -55,7 +55,7 @@ router.patch(
 router.patch(
 	'/assignments/:orderId/start',
 	authController.protect,
-	authController.restrictTo('DRIVER', 'SUPER_ADMIN'),
+	authController.restrictTo('DRIVER', 'SUPER_ADMIN', 'COMPANY_ADMIN'),
 	driverController.startOrderAssignment
 );
 router.patch(
