@@ -1,3 +1,4 @@
+
 const express = require('express');
 const authController = require('../controllers/auth.controller');
 const factory = require('./handlerFactory.controller'); // Import the handler factory
@@ -9,6 +10,44 @@ const router = express.Router();
 const appError = require('../utils/appError');
 const catchAsync = require('../utils/catchAsync');
 const APIFeatures = require('../utils/apiFeatures');
+const sendEmail = require('../utils/email');
+
+
+// Approve a company (SUPER_ADMIN only)
+exports.approveCompany = catchAsync(async (req, res, next) => {
+    // Only SUPER_ADMIN can approve
+    if (!req.user || req.user.role !== 'SUPER_ADMIN') {
+        return next(new appError('Only SUPER_ADMIN can approve companies', 403));
+    }
+    const company = await Company.findById(req.params.id);
+    if (!company) {
+        return next(new appError('No company found with that ID', 404));
+    }
+    // if (company.status === 'ACTIVE') {
+    //     return next(new appError('Company is already active', 400));
+    // }
+    company.status = 'ACTIVE';
+    await company.save();
+    // Send email notification to the company owner 
+    const owner = await User.findById(company.ownerId);
+    if (owner) {
+        try {
+            await sendEmail({
+                email: owner.email,
+                subject: 'Your company has been approved',
+                message: `Congratulations! Your company "${company.name}" has been approved and is now active on our platform. You can start adding drivers and vehicles to your company profile.`
+            });
+        } catch (err) {            console.error('Failed to send approval email:', err);
+        }
+    }
+
+    res.status(200).json({
+        status: 'success',
+        message: 'Company approved successfully',
+        data: { company }
+    });
+});
+
 
 // create a company
 exports.createCompany = catchAsync(async (req, res, next) => {

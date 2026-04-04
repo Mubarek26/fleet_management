@@ -1,5 +1,47 @@
 /**
  * @swagger
+ * /api/v1/company/{id}/approve:
+ *   put:
+ *     summary: Approve a company (SUPER_ADMIN)
+ *     description: Approve a pending company. Only SUPER_ADMIN can perform this action. Sets company status to ACTIVE.
+ *     tags: [Company]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The company ID
+ *     responses:
+ *       200:
+ *         description: Company approved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 message:
+ *                   type: string
+ *                   example: Company approved successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     company:
+ *                       $ref: '#/components/schemas/Company'
+ *       400:
+ *         description: Company is already active
+ *       403:
+ *         description: Only SUPER_ADMIN can approve companies
+ *       404:
+ *         description: Company not found
+ */
+/**
+ * @swagger
  * tags:
  *   - name: Company
  *     description: Company management endpoints
