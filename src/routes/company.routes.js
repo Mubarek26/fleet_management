@@ -1,3 +1,4 @@
+// Approve company (SUPER_ADMIN only)
 const express = require('express');
 const companyController = require('../controllers/company.controller');
 const authController = require('../controllers/auth.controller');
@@ -6,16 +7,23 @@ const upload = require('../middleware/uploads.middleware');
 // Protect all routes after this middleware
 router.use(authController.protect);
 
+
+// Place approve route before /:id
+router
+  .route('/:id/approve')
+  .put(companyController.approveCompany);
+
 router
   .route('/')
-    .get(companyController.getAllCompanies)
-    .post(upload.single('photo'), companyController.createCompany);
+  .get(companyController.getAllCompanies)
+  .post(upload.single('photo'), companyController.createCompany);
 
 
 router
-    .route('/vehicles')
-    .get(companyController.getCompanyVehicles)
-    .post(companyController.createCompanyVehicle);
+.route('/vehicles')
+.get(companyController.getCompanyVehicles)
+.post(companyController.createCompanyVehicle);
+
 
 router
     .route('/:id')

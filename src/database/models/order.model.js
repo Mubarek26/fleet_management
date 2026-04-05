@@ -133,6 +133,11 @@ const orderSchema = new mongoose.Schema(
 			unique: true,
 			index: true,
 		},
+        assignmentFailureReason: {
+            type: String,
+            trim: true,
+            default: null,
+        },
 		createdBy: {
 			type: mongoose.Schema.Types.ObjectId,
 			ref: 'User',
@@ -170,7 +175,7 @@ const orderSchema = new mongoose.Schema(
 		},
 		status: {
 			type: String,
-			enum: ['PENDING','REJECTED','OPEN', 'MATCHED', 'ASSIGNED', 'IN_TRANSIT', 'DELIVERED', 'CANCELLED'],
+			enum: ['PENDING','ACCEPTED','REJECTED','OPEN', 'MATCHED', 'ASSIGNED', 'IN_TRANSIT','ARRIVED', 'DELIVERED', 'CANCELLED'],
 			default: 'PENDING',
         },
         postStatus: {
@@ -226,13 +231,13 @@ const orderSchema = new mongoose.Schema(
 );
 
 orderSchema.pre('validate', function (next) {
-	if (this.assignmentMode === 'DIRECT_COMPANY') {
-		if (!this.targetCompanyId) {
-			return next(new Error('targetCompanyId is required when assignmentMode is DIRECT_COMPANY'));
-		}
+	// if (this.assignmentMode === 'DIRECT_COMPANY') {
+	// 	if (!this.targetCompanyId) {
+	// 		return next(new Error('targetCompanyId is required when assignmentMode is DIRECT_COMPANY'));
+	// 	}
 
-		this.targetTransporterId = null;
-	}
+	// 	this.targetTransporterId = null;
+	// }
 
 	if (this.assignmentMode === 'DIRECT_PRIVATE_TRANSPORTER') {
 		if (!this.targetTransporterId) {
