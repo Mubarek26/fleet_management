@@ -1,5 +1,45 @@
 /**
  * @swagger
+ * /api/v1/company/users/{id}/approve:
+ *   put:
+ *     summary: Approve a user (SUPER_ADMIN)
+ *     description: Approve a pending user with role VENDOR, PRIVATE_TRANSPORTER, or COMPANY_ADMIN. Only SUPER_ADMIN can perform this action. Sets user status to ACTIVE.
+ *     tags: [Company]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The user ID
+ *     responses:
+ *       200:
+ *         description: User approved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 message:
+ *                   type: string
+ *                   example: User approved successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       $ref: '#/components/schemas/User'
+ *       400:
+ *         description: User is already active or invalid role
+ *       403:
+ *         description: Only SUPER_ADMIN can approve users
+ *       404:
+ *         description: User not found
+ * @swagger
  * /api/v1/company/{id}/approve:
  *   put:
  *     summary: Approve a company (SUPER_ADMIN)

@@ -1,12 +1,18 @@
+
 // Approve company (SUPER_ADMIN only)
 const express = require('express');
 const companyController = require('../controllers/company.controller');
 const authController = require('../controllers/auth.controller');
 const router = express.Router();
 const upload = require('../middleware/uploads.middleware');
+
+const requireActiveStatus = require('../middleware/requireActiveStatus.middleware');
 // Protect all routes after this middleware
 router.use(authController.protect);
+router.use(requireActiveStatus);
 
+// Approve user (SUPER_ADMIN only)
+router.route('/users/:id/approve').put(authController.restrictTo('SUPER_ADMIN'), companyController.approveUser);
 
 // Place approve route before /:id
 router

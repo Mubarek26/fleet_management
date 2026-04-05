@@ -37,7 +37,6 @@ const userSchema = new mongoose.Schema({
       "DRIVER",
       "COMPANY_ADMIN",
       "PRIVATE_TRANSPORTER",
-      "BROKER",
       "SUPER_ADMIN"
     ],
     required: true

@@ -1,9 +1,11 @@
 const express = require('express');
 const authController = require('../controllers/auth.controller');
 const driverController = require('../controllers/driver.controller');
-
+const requireActiveStatus = require('../middleware/requireActiveStatus.middleware');
 const router = express.Router();
 
+
+router.use(requireActiveStatus);
 router.get(
 	'/assignments',
 	authController.protect,
@@ -69,6 +71,15 @@ router.patch(
 	authController.protect,
 	authController.restrictTo('DRIVER', 'SUPER_ADMIN'),
 	driverController.completeOrderAssignment
+);
+
+
+// POST /api/driver/location - GPS streaming
+router.post(
+	'/location',
+	authController.protect,
+	authController.restrictTo('DRIVER', 'SUPER_ADMIN'),
+	require('../controllers/driver.controller').streamLocation
 );
 
 module.exports = router;

@@ -1,3 +1,5 @@
+// Approve a user (VENDOR, PRIVATE_TRANSPORTER, COMPANY_ADMIN) - SUPER_ADMIN only
+
 
 const express = require('express');
 const authController = require('../controllers/auth.controller');
@@ -11,6 +13,40 @@ const appError = require('../utils/appError');
 const catchAsync = require('../utils/catchAsync');
 const APIFeatures = require('../utils/apiFeatures');
 const sendEmail = require('../utils/email');
+
+exports.approveUser = catchAsync(async (req, res, next) => {
+    // Only SUPER_ADMIN can approve
+    if (!req.user || req.user.role !== 'SUPER_ADMIN') {
+        return next(new appError('Only SUPER_ADMIN can approve users', 403));
+    }
+    const user = await User.findById(req.params.id);
+    if (!user) {
+        return next(new appError('No user found with that ID', 404));
+    }
+    if (!['VENDOR', 'PRIVATE_TRANSPORTER', 'COMPANY_ADMIN'].includes(user.role)) {
+        return next(new appError('Only VENDOR, PRIVATE_TRANSPORTER, or COMPANY_ADMIN users can be approved with this endpoint', 400));
+    }
+    if (user.status === 'ACTIVE') {
+        return next(new appError('User is already active', 400));
+    }
+    user.status = 'ACTIVE';
+    await user.save();
+    // Optionally, send email notification to the user
+    try {
+        await sendEmail({
+            email: user.email,
+            subject: 'Your account has been approved',
+            message: `Congratulations! Your account has been approved and is now active on our platform.`
+        });
+    } catch (err) {
+        console.error('Failed to send approval email:', err);
+    }
+    res.status(200).json({
+        status: 'success',
+        message: 'User approved successfully',
+        data: { user }
+    });
+});
 
 
 // Approve a company (SUPER_ADMIN only)
