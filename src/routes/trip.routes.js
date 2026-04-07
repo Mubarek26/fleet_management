@@ -8,6 +8,19 @@ router.use(authController.protect);
 router.use(requireActiveStatus);
 
 // PATCH /api/driver/trips/:id/milestone
-router.patch('/driver/trips/:id/milestone', tripController.updateMilestone);
+
+// Trip CRUD endpoints
+router.get('/:id', tripController.getTripById); // Get trip details
+router.get('/', tripController.getAllTrips); // List trips
+router.post('/', tripController.createTrip); // Create trip
+router.patch('/:id', tripController.updateTrip); // Update trip
+router.delete('/:id', tripController.deleteTrip); // Delete trip
+
+// Real-time tracking info (stub, usually handled by WebSocket)
+router.get('/:id/track', tripController.getTripTracking);
+
+// PATCH milestone (existing)
+router.patch('/driver/:id/milestone', tripController.updateMilestone);
+
 
 module.exports = router;
