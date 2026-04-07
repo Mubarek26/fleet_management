@@ -16,6 +16,8 @@ const startServer = async () => {
 	server = app.listen(PORT, () => {
 		// eslint-disable-next-line no-console
 		console.log(`Server running on port ${PORT}`);
+		// Initialize Socket.io
+		require('./utils/socket').init(server);
 	});
 };
 

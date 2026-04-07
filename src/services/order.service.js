@@ -22,9 +22,23 @@ exports.assignOrder = async (orderId, driverId, vehicleId) => {
 	}
 	order.targetTransporterId = driverId;
 	order.assignedVehicleId = vehicleId;
-	// order.status = 'ASSIGNED';
+	order.status = 'ASSIGNED';
 	order.assignmentFailureReason = null;
 	await order.save();
+
+	// --- Trip creation logic ---
+	const Trip = require('../database/models/trip.model');
+	const existingTrip = await Trip.findOne({ orderId: order._id });
+	if (!existingTrip) {
+		await Trip.create({
+			orderId: order._id,
+			driverId,
+			vehicleId,
+			milestone: 'STARTED',
+			milestoneHistory: [{ milestone: 'STARTED', at: new Date() }]
+		});
+	}
+
 	return order;
 };
 

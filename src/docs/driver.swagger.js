@@ -1,5 +1,216 @@
 /**
  * @swagger
+ * /api/driver/location:
+ *   post:
+ *     summary: Stream driver GPS location
+ *     description: Update and stream the driver’s current GPS location for a trip. Emits real-time updates via WebSocket.
+ *     tags: [Driver]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - tripId
+ *               - latitude
+ *               - longitude
+ *             properties:
+ *               tripId:
+ *                 type: string
+ *                 description: The trip ID
+ *               latitude:
+ *                 type: number
+ *                 description: Latitude
+ *               longitude:
+ *                 type: number
+ *                 description: Longitude
+ *               speed:
+ *                 type: number
+ *                 description: (Optional) Speed in km/h
+ *               heading:
+ *                 type: number
+ *                 description: (Optional) Heading in degrees
+ *     responses:
+ *       200:
+ *         description: Location updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 message:
+ *                   type: string
+ *                   example: Location updated
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     tripId:
+ *                       type: string
+ *                     latitude:
+ *                       type: number
+ *                     longitude:
+ *                       type: number
+ *                     speed:
+ *                       type: number
+ *                     heading:
+ *                       type: number
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden (trip does not belong to driver)
+ *       404:
+ *         description: Trip not found
+ */
+/**
+ * @swagger
+ * /api/v1/driver/assignments/{orderId}/accept:
+ *   patch:
+ *     summary: Driver accepts assigned order
+ *     description: Allows a driver to accept an order that is in ASSIGNED state.
+ *     tags: [Driver]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: orderId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The order ID to accept
+ *     responses:
+ *       200:
+ *         description: Order accepted successfully
+ *       400:
+ *         description: Order is not in ASSIGNED state
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Order not found
+ */
+/**
+ * @swagger
+ * /api/v1/driver/assignments/{orderId}/reject:
+ *   patch:
+ *     summary: Driver rejects assigned order
+ *     description: Allows a driver to reject an order that is in ASSIGNED state.
+ *     tags: [Driver]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: orderId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The order ID to reject
+ *     responses:
+ *       200:
+ *         description: Order rejected successfully
+ *       400:
+ *         description: Order is not in ASSIGNED state
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Order not found
+ */
+/**
+ * @swagger
+ * /api/v1/driver/assignments/{orderId}/start:
+ *   patch:
+ *     summary: Driver starts order assignment
+ *     description: Allows a driver to start an order that is in ACCEPTED or ASSIGNED state.
+ *     tags: [Driver]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: orderId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The order ID to start
+ *     responses:
+ *       200:
+ *         description: Order started successfully
+ *       400:
+ *         description: Order must be accepted or assigned to start
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Order not found
+ */
+/**
+ * @swagger
+ * /api/v1/driver/assignments/{orderId}/arrive:
+ *   patch:
+ *     summary: Driver marks arrival at pickup
+ *     description: Allows a driver to mark arrival at pickup for an order in IN_TRANSIT state.
+ *     tags: [Driver]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: orderId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The order ID to mark as arrived
+ *     responses:
+ *       200:
+ *         description: Arrival marked successfully
+ *       400:
+ *         description: Order must be IN_TRANSIT to arrive at pickup
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Order not found
+ */
+/**
+ * @swagger
+ * /api/v1/driver/assignments/{orderId}/complete:
+ *   patch:
+ *     summary: Driver completes order assignment
+ *     description: Allows a driver to complete an order that is in ARRIVED state.
+ *     tags: [Driver]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: orderId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The order ID to complete
+ *     responses:
+ *       200:
+ *         description: Order completed successfully
+ *       400:
+ *         description: Order must be ARRIVED to complete
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Order not found
+ */
+/**
+ * @swagger
  * tags:
  *   - name: Driver
  *     description: Driver status, assignments, and vehicle assignment endpoints
