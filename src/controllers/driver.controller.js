@@ -1,4 +1,7 @@
 // POST /api/driver/location
+const catchAsync = require('../utils/catchAsync');
+const driverService = require('../services/driver.service');
+
 const locationService = require('../services/location.service');
 const socket = require('../utils/socket');
 
@@ -37,8 +40,6 @@ exports.streamLocation = catchAsync(async (req, res, next) => {
 
 
 
-const catchAsync = require('../utils/catchAsync');
-const driverService = require('../services/driver.service');
 
 exports.acceptOrderAssignment = catchAsync(async (req, res) => {
 	const order = await driverService.acceptOrderAssignment(req.user, req.params.orderId);

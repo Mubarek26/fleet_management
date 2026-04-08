@@ -65,11 +65,16 @@ app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
 const loadRouter = (modulePath, label) => {
 	try {
 		const router = require(modulePath);
-		if (typeof router === "function") return router;
-		console.warn(`Skipping ${label}: module does not export an Express router`);
+
+		if (router && router.stack) {
+			console.log(`✅ Loaded ${label}`);
+			return router;
+		}
+
+		console.warn(`⚠️ Skipping ${label}: not a valid Express router`);
 		return null;
 	} catch (error) {
-		console.warn(`Skipping ${label}: ${error.message}`);
+		console.error(`❌ Failed ${label}: ${error.message}`);
 		return null;
 	}
 };
@@ -85,7 +90,7 @@ const routesToMount = [
 	{ base: "/api/v1/payment", modulePath: "./routes/payment.routes", label: "payment.routes" },
 	{ base: "/api/v1/rating", modulePath: "./routes/rating.routes", label: "rating.routes" },
 	{ base: "/api/v1/tracking", modulePath: "./routes/tracking.routes", label: "tracking.routes" },
-	{ base: "/api/v1/trip", modulePath: "./routes/trip.routes", label: "trip.routes" },
+	{ base: "/api/v1/trips", modulePath: "./routes/trip.routes", label: "trip.routes" },
 	{ base: "/api/v1/analytics", modulePath: "./routes/analytics.routes", label: "analytics.routes" },
 ];
 

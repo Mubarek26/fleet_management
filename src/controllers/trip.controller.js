@@ -3,12 +3,131 @@ const Order = require('../database/models/order.model');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
 
+
+// GET /api/trips/:id
+exports.getTripById = catchAsync(async (req, res, next) => {
+  const trip = await Trip.findById(req.params.id);
+  if (!trip) return next(new AppError('Trip not found', 404));
+  res.status(200).json({ status: 'success', data: { trip } });
+});
+
+// GET /api/trips
+exports.getAllTrips = catchAsync(async (req, res, next) => {
+  // Add filters as needed (e.g., by user, driver, status)
+  const trips = await Trip.find();
+  res.status(200).json({ status: 'success', results: trips.length, data: { trips } });
+});
+
+// POST /api/trips
+exports.createTrip = catchAsync(async (req, res, next) => {
+  let { location } = req.body;
+
+  // ✅ Basic structure validation
+  if (
+    !location ||
+    location.type !== 'Point' ||
+    !Array.isArray(location.coordinates) ||
+    location.coordinates.length !== 2
+  ) {
+    return next(
+      new AppError(
+        'Location must be GeoJSON: { type: "Point", coordinates: [lng, lat] }',
+        400
+      )
+    );
+  }
+
+  // ✅ Ensure numbers
+  let [lng, lat] = location.coordinates.map(Number);
+
+  if (isNaN(lng) || isNaN(lat)) {
+    return next(new AppError('Coordinates must be numbers.', 400));
+  }
+
+  // ✅ Validate ranges
+  if (lng < -180 || lng > 180 || lat < -90 || lat > 90) {
+    return next(
+      new AppError('Invalid longitude/latitude values.', 400)
+    );
+  }
+
+  // ✅ Normalize clean GeoJSON
+  const cleanLocation = {
+    type: 'Point',
+    coordinates: [lng, lat]
+  };
+
+  // ✅ Build safe payload (DO NOT trust req.body fully)
+  const tripData = {
+    ...req.body,
+    location: cleanLocation,
+    locationHistory: [cleanLocation]
+  };
+
+  const trip = await Trip.create(tripData);
+
+  res.status(201).json({
+    status: 'success',
+    data: { trip }
+  });
+});
+
+// PATCH /api/trips/:id
+exports.updateTrip = catchAsync(async (req, res, next) => {
+  const trip = await Trip.findById(req.params.id);
+  if (!trip) return next(new AppError('Trip not found', 404));
+  // If location is being updated, also push to locationHistory
+  if (req.body.location && req.body.location.type === 'Point' && Array.isArray(req.body.location.coordinates)) {
+    trip.location = req.body.location;
+    trip.locationHistory = trip.locationHistory || [];
+    trip.locationHistory.push(req.body.location);
+  }
+  // Update other fields
+  Object.keys(req.body).forEach(key => {
+    if (key !== 'location' && key !== 'locationHistory') {
+      trip[key] = req.body[key];
+    }
+  });
+  await trip.save();
+  res.status(200).json({ status: 'success', data: { trip } });
+});
+
+// DELETE /api/trips/:id
+exports.deleteTrip = catchAsync(async (req, res, next) => {
+  const trip = await Trip.findByIdAndUpdate(
+    req.params.id,
+    { active: false },
+    { new: true, runValidators: true }
+  );
+
+  if (!trip) return next(new AppError('Trip not found', 404));
+
+  res.status(200).json({
+    status: 'success',
+    data: trip
+  });
+});
+// GET /api/trips/:id/track
+exports.getTripTracking = catchAsync(async (req, res, next) => {
+  const trip = await Trip.findById(req.params.id);
+  if (!trip) return next(new AppError('Trip not found', 404));
+  res.status(200).json({
+    status: 'success',
+    data: {
+      location: trip.location,
+      locationHistory: trip.locationHistory,
+      milestone: trip.milestone
+    }
+  });
+});
+
+
 // PATCH /api/driver/trips/:id/milestone
 exports.updateMilestone = catchAsync(async (req, res, next) => {
   const { milestone, location, note } = req.body;
   const trip = await Trip.findById(req.params.id);
   if (!trip) return next(new AppError('Trip not found', 404));
-
+  if (trip.active === false) return next(new AppError('Trip is inactive/deleted', 400));
   // Optionally, validate allowed milestones
   const allowedMilestones = ['STARTED', 'ARRIVED', 'IN_TRANSIT', 'DELIVERED', 'COMPLETED'];
   if (!milestone || !allowedMilestones.includes(milestone)) {
@@ -16,7 +135,11 @@ exports.updateMilestone = catchAsync(async (req, res, next) => {
   }
 
   trip.milestone = milestone;
-  if (location) trip.lastLocation = location;
+  if (location && location.type === 'Point' && Array.isArray(location.coordinates)) {
+    trip.location = location;
+    trip.locationHistory = trip.locationHistory || [];
+    trip.locationHistory.push(location);
+  }
   if (note) trip.lastNote = note;
   trip.milestoneHistory = trip.milestoneHistory || [];
   trip.milestoneHistory.push({ milestone, location, note, at: new Date() });
