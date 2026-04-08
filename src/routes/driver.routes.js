@@ -2,41 +2,59 @@ const express = require('express');
 const authController = require('../controllers/auth.controller');
 const driverController = require('../controllers/driver.controller');
 const requireActiveStatus = require('../middleware/requireActiveStatus.middleware');
+const upload = require('../middleware/uploads.middleware');
+const tripProofController = require('../controllers/tripProof.controller');
+
 const router = express.Router();
 
-
+// Debug route to verify router is loaded (public)
+router.get('/test', (req, res) => res.json({ ok: true }));
+router.use(authController.protect);
 router.use(requireActiveStatus);
+
+// Proof of Delivery: Upload evidence (photo, signature, note)
+router.post(
+	'/trips/:id/evidence',
+	authController.restrictTo('DRIVER', 'SUPER_ADMIN'),
+	upload.single('file'), // expects multipart/form-data with 'file'
+	tripProofController.uploadProofOfDelivery
+);
+
+// Proof of Delivery: Verify OTP
+router.post(
+	'/trips/:id/verify-otp',
+	authController.restrictTo('DRIVER', 'SUPER_ADMIN'),
+	tripProofController.verifyDeliveryOtp
+);
+
+
+
 router.get(
 	'/assignments',
-	authController.protect,
 	authController.restrictTo('DRIVER', 'SUPER_ADMIN'),
 	driverController.getMyAssignments
 );
 
 router.patch(
 	'/status',
-	authController.protect,
 	authController.restrictTo('DRIVER', 'SUPER_ADMIN', 'COMPANY_ADMIN'),
 	driverController.updateMyStatus
 );
 
 router.post(
 	'/vehicles/assign',
-	authController.protect,
 	authController.restrictTo('COMPANY_ADMIN', 'SUPER_ADMIN'),
 	driverController.assignVehicleToDriver
 );
 
 router.post(
 	'/vehicles/unassign',
-	authController.protect,
 	authController.restrictTo('COMPANY_ADMIN', 'SUPER_ADMIN'),
 	driverController.unassignVehicleFromDriver
 );
 
 router.post(
 	'/vehicles/reassign',
-	authController.protect,
 	authController.restrictTo('COMPANY_ADMIN', 'SUPER_ADMIN'),
 	driverController.reassignVehicleForDriver
 );
@@ -44,31 +62,26 @@ router.post(
 // Driver order action endpoints
 router.patch(
 	'/assignments/:orderId/accept',
-	authController.protect,
 	authController.restrictTo('DRIVER', 'SUPER_ADMIN'),
 	driverController.acceptOrderAssignment
 );
 router.patch(
 	'/assignments/:orderId/reject',
-	authController.protect,
 	authController.restrictTo('DRIVER', 'SUPER_ADMIN'),
 	driverController.rejectOrderAssignment
 );
 router.patch(
 	'/assignments/:orderId/start',
-	authController.protect,
 	authController.restrictTo('DRIVER', 'SUPER_ADMIN', 'COMPANY_ADMIN'),
 	driverController.startOrderAssignment
 );
 router.patch(
 	'/assignments/:orderId/arrive',
-	authController.protect,
 	authController.restrictTo('DRIVER', 'SUPER_ADMIN'),
 	driverController.arriveAtPickup
 );
 router.patch(
 	'/assignments/:orderId/complete',
-	authController.protect,
 	authController.restrictTo('DRIVER', 'SUPER_ADMIN'),
 	driverController.completeOrderAssignment
 );
@@ -77,7 +90,6 @@ router.patch(
 // POST /api/driver/location - GPS streaming
 router.post(
 	'/location',
-	authController.protect,
 	authController.restrictTo('DRIVER', 'SUPER_ADMIN'),
 	require('../controllers/driver.controller').streamLocation
 );

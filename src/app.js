@@ -65,11 +65,16 @@ app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
 const loadRouter = (modulePath, label) => {
 	try {
 		const router = require(modulePath);
-		if (typeof router === "function") return router;
-		console.warn(`Skipping ${label}: module does not export an Express router`);
+
+		if (router && router.stack) {
+			console.log(`✅ Loaded ${label}`);
+			return router;
+		}
+
+		console.warn(`⚠️ Skipping ${label}: not a valid Express router`);
 		return null;
 	} catch (error) {
-		console.warn(`Skipping ${label}: ${error.message}`);
+		console.error(`❌ Failed ${label}: ${error.message}`);
 		return null;
 	}
 };

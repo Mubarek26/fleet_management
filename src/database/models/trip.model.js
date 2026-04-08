@@ -31,6 +31,14 @@ const geoPointSchema = new mongoose.Schema({
   }
 }, { _id: false });
 
+// Proof of Delivery evidence schema
+const evidenceSchema = new mongoose.Schema({
+  type: { type: String, enum: ['photo', 'signature', 'note'], required: true },
+  url: String, // for photo/signature
+  note: String,
+  at: { type: Date, default: Date.now }
+}, { _id: false });
+
 // Main Trip schema
 const tripSchema = new mongoose.Schema({
   // ✅ Current location (indexed)
@@ -84,6 +92,19 @@ const tripSchema = new mongoose.Schema({
   active: {
     type: Boolean,
     default: true
+  },
+
+  // Proof of Delivery evidence
+  proofOfDelivery: {
+    type: [evidenceSchema],
+    default: []
+  },
+
+  // OTP for delivery verification
+  deliveryOtp: {
+    code: { type: String },
+    expiresAt: { type: Date },
+    verified: { type: Boolean, default: false }
   }
 
 }, { timestamps: true });
