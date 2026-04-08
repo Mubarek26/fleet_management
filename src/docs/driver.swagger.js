@@ -1,5 +1,94 @@
 /**
  * @swagger
+ * /api/v1/driver/trips/{id}/evidence:
+ *   post:
+ *     summary: Upload proof of delivery (photo, signature, note)
+ *     description: Allows a driver to upload delivery evidence for a trip. Accepts multipart/form-data with a file and/or note.
+ *     tags: [Driver]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Trip ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - type
+ *             properties:
+ *               type:
+ *                 type: string
+ *                 enum: [photo, signature, note]
+ *                 description: Type of evidence
+ *               note:
+ *                 type: string
+ *                 description: Optional note
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: Image or signature file
+ *     responses:
+ *       200:
+ *         description: Proof of delivery uploaded
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Trip not found
+ */
+
+/**
+ * @swagger
+ * /api/v1/driver/trips/{id}/verify-otp:
+ *   post:
+ *     summary: Verify delivery OTP
+ *     description: Allows a driver to verify the OTP provided by the recipient to complete delivery.
+ *     tags: [Driver]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Trip ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - otp
+ *             properties:
+ *               otp:
+ *                 type: string
+ *                 description: The OTP code provided by the recipient
+ *     responses:
+ *       200:
+ *         description: OTP verified, delivery completed
+ *       400:
+ *         description: Invalid or expired OTP
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Trip not found or no OTP set
+ */
+/**
+ * @swagger
  * /api/driver/location:
  *   post:
  *     summary: Stream driver GPS location
