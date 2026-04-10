@@ -1,3 +1,5 @@
+const pricingConfigRouter = require('./routes/pricingConfig.routes');
+const paymentRouter = require('./routes/payment.routes');
 const express = require("express");
 const AppError = require("./utils/appError");
 const globalErrorHandler = require("./middleware/error.middleware");
@@ -6,7 +8,7 @@ const path = require("path");
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
 const swaggerUi = require('swagger-ui-express');
-
+const smsCallbackRouter = require('./controllers/sms.controller');
 dotenv.config();
 
 const swaggerSpec = require('./config/swagger');
@@ -94,12 +96,19 @@ const routesToMount = [
 	{ base: "/api/v1/analytics", modulePath: "./routes/analytics.routes", label: "analytics.routes" },
 ];
 
+
 for (const routeConfig of routesToMount) {
 	const router = loadRouter(routeConfig.modulePath, routeConfig.label);
 	if (router) {
 		app.use(routeConfig.base, router);
 	}
 }
+
+
+// AfroMessage SMS delivery callback endpoint (public, no auth)
+app.use('/', smsCallbackRouter);
+app.use('/api/v1/payment', paymentRouter);
+app.use('/api/v1/pricing-config', pricingConfigRouter);
 
 app.get("/health", (req, res) => {
 	res.status(200).json({

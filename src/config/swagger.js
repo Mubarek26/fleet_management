@@ -539,7 +539,9 @@ const options = {
     './src/docs/order.swagger.js',
     './src/docs/driver.swagger.js',
     './src/docs/broker.swagger.js',
-    './src/docs/trip.swagger.js'
+    './src/docs/trip.swagger.js',
+    './src/docs/payment.swagger.js',
+    './src/docs/pricingConfig.swagger.js'
   ]
 };
 
