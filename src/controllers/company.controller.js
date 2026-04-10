@@ -13,7 +13,7 @@ const appError = require('../utils/appError');
 const catchAsync = require('../utils/catchAsync');
 const APIFeatures = require('../utils/apiFeatures');
 const sendEmail = require('../utils/email');
-
+const { sendSMS } = require('../services/afromessage.service');
 exports.approveUser = catchAsync(async (req, res, next) => {
     // Only SUPER_ADMIN can approve
     if (!req.user || req.user.role !== 'SUPER_ADMIN') {
@@ -23,9 +23,9 @@ exports.approveUser = catchAsync(async (req, res, next) => {
     if (!user) {
         return next(new appError('No user found with that ID', 404));
     }
-    if (!['VENDOR', 'PRIVATE_TRANSPORTER', 'COMPANY_ADMIN'].includes(user.role)) {
-        return next(new appError('Only VENDOR, PRIVATE_TRANSPORTER, or COMPANY_ADMIN users can be approved with this endpoint', 400));
-    }
+    // if (!['VENDOR', 'PRIVATE_TRANSPORTER', 'COMPANY_ADMIN', 'SUPER_ADMIN'].includes(user.role)) {
+    //     return next(new appError('Only VENDOR, PRIVATE_TRANSPORTER, COMPANY_ADMIN, or SUPER_ADMIN users can be approved with this endpoint', 400));
+    // }
     if (user.status === 'ACTIVE') {
         return next(new appError('User is already active', 400));
     }
@@ -41,11 +41,22 @@ exports.approveUser = catchAsync(async (req, res, next) => {
     } catch (err) {
         console.error('Failed to send approval email:', err);
     }
+     // send approval sms
+    try {
+        await sendSMS({
+            to: user.phoneNumber,
+            message: `Congratulations! Your account has been approved and is now active on our platform.`
+        });
+    } catch (err) {        console.error('Failed to send approval SMS:', err);
+    }
     res.status(200).json({
         status: 'success',
         message: 'User approved successfully',
         data: { user }
     });
+
+   
+
 });
 
 
