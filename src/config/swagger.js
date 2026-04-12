@@ -1,6 +1,6 @@
 const swaggerJsdoc = require('swagger-jsdoc');
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 
 const options = {
   definition: {
@@ -12,8 +12,8 @@ const options = {
     },
     servers: [
       {
-        url: process.env.SWAGGER_SERVER_URL || '/',
-        description: process.env.SWAGGER_SERVER_URL ? 'Configured server' : 'Same origin server'
+        url: process.env.SWAGGER_SERVER_URL || 'http://localhost:5000',
+        description: process.env.SWAGGER_SERVER_URL ? 'Configured server' : 'Local server on port 5000'
       }
     ],
     components: {
@@ -25,6 +25,20 @@ const options = {
         }
       },
       schemas: {
+                Transaction: {
+                  type: 'object',
+                  required: ['tx_ref', 'status', 'amount'],
+                  properties: {
+                    _id: { type: 'string', example: '67c9fbd9be8f3b0fbd7d8f51' },
+                    tx_ref: { type: 'string', example: 'TX123456789' },
+                    status: { type: 'string', example: 'SUCCESS' },
+                    amount: { type: 'number', example: 100.5 },
+                    ref_id: { type: 'string', example: 'REF987654321' },
+                    orderId: { type: 'string', example: 'ORDER123456' },
+                    createdAt: { type: 'string', format: 'date-time', example: '2026-04-11T10:00:00.000Z' },
+                    updatedAt: { type: 'string', format: 'date-time', example: '2026-04-11T10:05:00.000Z' }
+                  }
+                },
         Company: {
           type: 'object',
           required: ['companyName', 'phoneNumber', 'email', 'businessLicense', 'ownerId'],
@@ -539,7 +553,14 @@ const options = {
     './src/docs/order.swagger.js',
     './src/docs/driver.swagger.js',
     './src/docs/broker.swagger.js',
-    './src/docs/trip.swagger.js'
+    './src/docs/trip.swagger.js',
+    './src/docs/payment.swagger.js',
+    './src/docs/transaction.swagger.js',
+    './src/docs/pricingConfig.swagger.js',
+    './src/docs/sms.swagger.js',
+    './src/docs/config.swagger.js',
+    './src/docs/driverCommission.swagger.js',
+    './src/docs/driverTrip.swagger.js'
   ]
 };
 

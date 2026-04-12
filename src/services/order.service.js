@@ -1,4 +1,14 @@
 // Assign driver and vehicle to order with validation
+
+
+const Order = require('../database/models/order.model');
+const Company = require('../database/models/company.model');
+const User = require('../database/models/user.model');
+const brokerService = require('./broker.service');
+const AppError = require('../utils/appError');
+const Vehicle = require('../database/models/vehicle.model');
+const Trip = require('../database/models/trip.model');
+
 exports.assignOrder = async (orderId, driverId, vehicleId) => {
 	if (!orderId || !driverId || !vehicleId) {
 		throw new AppError('orderId, driverId, and vehicleId are required', 400);
@@ -12,7 +22,7 @@ exports.assignOrder = async (orderId, driverId, vehicleId) => {
 	const driver = await User.findOne({ _id: driverId, active: true, status: 'ACTIVE' });
 	if (!driver) throw new AppError('Driver not found or inactive', 404);
 	// Check vehicle exists and is active
-	const Vehicle = require('../database/models/vehicle.model');
+	
 	const vehicle = await Vehicle.findOne({ _id: vehicleId, active: true, status: 'ACTIVE' });
 	if (!vehicle) throw new AppError('Vehicle not found or inactive', 404);
 	// Optionally, check vehicle is not already assigned to another order (except this one)
@@ -27,7 +37,7 @@ exports.assignOrder = async (orderId, driverId, vehicleId) => {
 	await order.save();
 
 	// --- Trip creation logic ---
-	const Trip = require('../database/models/trip.model');
+
 	const existingTrip = await Trip.findOne({ orderId: order._id });
 	if (!existingTrip) {
 		await Trip.create({
@@ -42,11 +52,6 @@ exports.assignOrder = async (orderId, driverId, vehicleId) => {
 	return order;
 };
 
-const Order = require('../database/models/order.model');
-const Company = require('../database/models/company.model');
-const User = require('../database/models/user.model');
-const brokerService = require('./broker.service');
-const AppError = require('../utils/appError');
 
 const ALLOWED_CREATOR_ROLES = ['SHIPPER', 'VENDOR', 'BROKER', 'SUPER_ADMIN'];
 const ALLOWED_MARKETPLACE_VIEWER_ROLES = ['COMPANY_ADMIN', 'PRIVATE_TRANSPORTER', 'SUPER_ADMIN'];

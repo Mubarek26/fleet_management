@@ -127,7 +127,7 @@ const pricingSchema = new mongoose.Schema(
 );
 
 const orderSchema = new mongoose.Schema(
-	{
+ {
 		orderNumber: {
 			type: String,
 			unique: true,
@@ -178,11 +178,16 @@ const orderSchema = new mongoose.Schema(
 			enum: ['PENDING','ACCEPTED','REJECTED','OPEN', 'MATCHED', 'ASSIGNED', 'IN_TRANSIT','ARRIVED', 'DELIVERED', 'CANCELLED'],
 			default: 'PENDING',
         },
-        postStatus: {
+		postStatus: {
             type: String,
             enum: ['ACTIVE', 'EXPIRED', 'CANCELLED', 'COMPLETED', 'ARCHIVED', 'DELETED'],
             default: 'ACTIVE',
-        },
+		},
+		paymentStatus: {
+			type: String,
+			enum: ['pending', 'paid', 'failed'],
+			default: 'pending',
+		},
 		title: {
 			type: String,
 			required: true,
