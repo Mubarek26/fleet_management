@@ -1,5 +1,5 @@
 // pricingConfig.controller.js
-const PricingConfig = require('../database/models/pricingConfig.model');
+const PricingConfig = require('../database/models/PricingConfig.model');
 const catchAsync = require('../utils/catchAsync');
 const appError = require('../utils/appError');
 
