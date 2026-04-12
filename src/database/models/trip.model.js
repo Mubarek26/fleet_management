@@ -44,7 +44,7 @@ const tripSchema = new mongoose.Schema({
   // ✅ Current location (indexed)
   location: {
     type: geoPointSchema,
-    required: true
+    // required: true
   },
 
   // ✅ History (NOT indexed)
@@ -105,6 +105,13 @@ const tripSchema = new mongoose.Schema({
     code: { type: String },
     expiresAt: { type: Date },
     verified: { type: Boolean, default: false }
+  },
+
+  // Reference to the driver's wallet transaction for this trip (if paid)
+  driverWalletTransaction: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Transaction',
+    default: null
   }
 
 }, { timestamps: true });

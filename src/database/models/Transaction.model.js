@@ -2,21 +2,28 @@
 const mongoose = require('mongoose');
 
 const transactionSchema = new mongoose.Schema({
-  tx_ref: { type: String, required: true, unique: true },
+  trx_ref: { type: String, required: true, unique: true },
   status: { type: String, required: true },
   amount: { type: Number, required: true },
   ref_id: { type: String },
   orderId: { type: String },
+  companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company' },
+  commission: { type: Number, default: 0 },
+  companyShare: { type: Number, default: 0 },
+  driverCommission: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
 
+
 // Helper to save transaction
 transactionSchema.statics.saveTransactionToDatabase = async function (data) {
-  const { tx_ref, status, amount, ref_id, orderId } = data;
+  const { trx_ref, status, amount, ref_id, orderId, companyId, commission = 0, driverCommission = 0 } = data;
+  // Calculate company share
+  const companyShare = amount - commission;
   return this.findOneAndUpdate(
-    { tx_ref },
-    { status, amount, ref_id, orderId, updatedAt: new Date() },
+    { trx_ref },
+    { status, amount, ref_id, orderId, companyId, commission, companyShare, driverCommission, updatedAt: new Date() },
     { upsert: true, new: true }
   );
 };

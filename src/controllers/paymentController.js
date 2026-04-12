@@ -1,5 +1,4 @@
 const calculateDistance = require('../utils/calculateDistance');
-const calculateAmount = require('../utils/calculateAmount');
 const catchAsync = require("../utils/catchAsync");
 const appError = require("../utils/appError");
 const TEST_PAYMENT_SECRET = process.env.TEST_PAYMENT_SECRET;
@@ -9,12 +8,15 @@ const Transaction = require("../database/models/Transaction.model");
 const axios = require("axios");
 const Order = require("../database/models/order.model");
 const calculateTripAmount = require("../utils/calculateAmount");
+const { creditDriverWallet } = require('../services/driverWallet');
+ const CommissionConfig = require('../database/models/commissionConfig.model');
 // const saveTransactionToDatabase =
 //   (TransactionModule && TransactionModule.saveTransactionToDatabase) ||
 //   (typeof TransactionModule === "function" ? TransactionModule : null);
 exports.initializePayment = catchAsync(async (req, res, next) => {
+  console.log("Payment Initialization Request Body:", req.body);
   const { currency, phone_number, orderId } = req.body;
-  const tx_ref = `tx_${orderId ? String(orderId) : Date.now()}`;
+  const tx_ref = `trx_${orderId ? String(orderId) : Date.now()}`;
   // Validate request data
   if (!currency || !phone_number || !tx_ref || !orderId) {
     return next(new appError("Missing required fields", 400));
@@ -47,7 +49,7 @@ exports.initializePayment = catchAsync(async (req, res, next) => {
         phone_number,
         tx_ref,
         callback_url: process.env.CALLBACK_URL,
-        return_url: `${process.env.RETURN_URL}?tx_ref=${tx_ref}&order_id=${orderId}`,
+        // return_url: `${process.env.RETURN_URL}?tx_ref=${tx_ref}&order_id=${orderId}`,
         customization: {
           title: "My Shop Payment",
           description: "Payment for order",
@@ -83,18 +85,27 @@ exports.initializePayment = catchAsync(async (req, res, next) => {
 });
 
 
+
+
 exports.callBack = catchAsync(async (req, res, next) => {
   console.log("Payment Callback Request Body:", req.body);
-  const { ref_id, tx_ref } = req.body;
+  // const { ref_id, trx_ref } = req.body;
+  const trx_ref = req.body?.trx_ref || req.query?.trx_ref || req.params?.trx_ref;
+  const ref_id = req.body?.ref_id || req.query?.ref_id || req.params?.ref_id;
 
-  if (!tx_ref) {
-    console.warn("[payment callback] missing tx_ref");
-    return res.status(400).json({ status: "fail", message: "Missing tx_ref" });
+  if (!trx_ref) {
+    console.warn("[payment callback] missing trx_ref");
+    return res.status(400).json({ status: "fail", message: "Missing trx_ref" });
   }
-  const orderId = tx_ref.split("_")[1];
+  const orderId = trx_ref.split("_")[1];
+  const order = await Order.findById(orderId);
+  if (!order) {
+    console.warn(`[payment callback] order not found for trx_ref: ${trx_ref}`);
+    return res.status(404).json({ status: "fail", message: "Order not found" });
+  }
   try {
     const response = await axios.get(
-      `https://api.chapa.co/v1/transaction/verify/${tx_ref}`,
+      `https://api.chapa.co/v1/transaction/verify/${trx_ref}`,
       {
         headers: {
           Authorization: `Bearer ${process.env.TEST_PAYMENT_SECRET}`,
@@ -104,12 +115,35 @@ exports.callBack = catchAsync(async (req, res, next) => {
     console.log("Chapa Verification Response:", response.data);
     if (response.data.status === "success") {
       // Store transaction details in your database
-      await Transaction.saveTransactionToDatabase({ tx_ref, status: response.data.status, amount: response.data.data.amount, ref_id, orderId });
+      const config = await CommissionConfig.getConfig();
+      const COMMISSION_RATE = config.commissionRate;
+      const driverCommissionRate = config.driverCommissionRate;
+      const amount = response.data.data.amount;
+      const commission = amount * COMMISSION_RATE;
+      // console.log(`Calculated commission: ${commission} (amount: ${amount}, rate: ${COMMISSION_RATE})`);
+      // Calculate company and driver shares
+      const companyShare = amount - commission;
+      const driverShare = companyShare * driverCommissionRate;
+      // Save transaction with all commission info
+      const savedTx = await Transaction.saveTransactionToDatabase({
+        trx_ref: trx_ref,
+        status: response.data.status,
+        amount: response.data.data.amount,
+        ref_id,
+        orderId,
+        companyId: order.targetCompanyId ? order.targetCompanyId : order.targetTransporterId,
+        commission,
+        companyShare,
+        driverCommission: driverShare
+      });
       await Order.findOneAndUpdate(
-        { orderId: orderId },
-        { paymentStatus: "paid" },
+        { _id: orderId },
+        { paymentStatus: "paid", status: "DELIVERED" },
         { new: true }
       );
+      // Driver commission logic: use service function (driver gets 5% of company share by default)
+      await creditDriverWallet({trx_ref: trx_ref}, order, amount, commission, driverCommissionRate, { status: response.data.status });
+
       res.status(200).json({ status: "success", message: "Webhook received" });
     } else {
       res.status(400).json({ status: "fail", message: "Transaction verification failed" });

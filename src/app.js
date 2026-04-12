@@ -1,5 +1,9 @@
 const pricingConfigRouter = require('./routes/pricingConfig.routes');
+const configRouter = require('./routes/config.routes');
 const paymentRouter = require('./routes/payment.routes');
+const driverCommissionRouter = require('./routes/driverCommission.routes');
+const driverTripRouter = require('./routes/driverTrip.routes');
+const transactionRouter = require('./routes/transaction.routes');
 const express = require("express");
 const AppError = require("./utils/appError");
 const globalErrorHandler = require("./middleware/error.middleware");
@@ -41,6 +45,7 @@ const frontendOrigins = (process.env.FRONTEND_URLS || process.env.FRONTEND_URL |
 const allowedOrigins = Array.from(new Set([
 	...frontendOrigins,
 	"http://localhost:3000",
+	"http://localhost:5000",
 	"http://localhost:5173",
 	"http://localhost:5174",
 	"http://127.0.0.1:5173",
@@ -107,8 +112,14 @@ for (const routeConfig of routesToMount) {
 
 // AfroMessage SMS delivery callback endpoint (public, no auth)
 app.use('/', smsCallbackRouter);
+
+
 app.use('/api/v1/payment', paymentRouter);
 app.use('/api/v1/pricing-config', pricingConfigRouter);
+app.use('/api/v1/transactions', transactionRouter);
+app.use('/api/v1/config', configRouter);
+app.use('/api/v1/driver', driverCommissionRouter);
+app.use('/api/v1/driver', driverTripRouter);
 
 app.get("/health", (req, res) => {
 	res.status(200).json({
