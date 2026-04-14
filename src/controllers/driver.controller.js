@@ -6,35 +6,43 @@ const locationService = require('../services/location.service');
 const socket = require('../utils/socket');
 
 exports.streamLocation = catchAsync(async (req, res, next) => {
-	const { tripId, latitude, longitude, speed, heading } = req.body;
+	const { tripId, location, speed, heading } = req.body;
 	// Validate input
-	if (!tripId || latitude == null || longitude == null) {
-		return next(new (require('../utils/appError'))('tripId, latitude, and longitude are required', 400));
+	if (!tripId || !location || location.type !== 'Point' || !Array.isArray(location.coordinates) || location.coordinates.length !== 2) {
+		return next(new (require('../utils/appError'))('tripId and location (GeoJSON Point) are required', 400));
+	}
+	const [lng, lat] = location.coordinates.map(Number);
+	if (isNaN(lng) || isNaN(lat)) {
+		return next(new (require('../utils/appError'))('Coordinates must be numbers.', 400));
 	}
 	// Update location in DB and check trip ownership
 	const trip = await locationService.updateDriverLocation({
 		tripId,
 		driverId: req.user._id,
-		latitude,
-		longitude,
-		speed,
-		heading
+		location: {
+			type: 'Point',
+			coordinates: [lng, lat],
+			speed,
+			heading
+		}
 	});
 	// Emit real-time update via Socket.io
 	socket.emitToTrip(tripId, {
 		type: 'driver-location',
 		tripId,
 		driverId: req.user._id,
-		latitude,
-		longitude,
-		speed,
-		heading,
+		location: {
+			type: 'Point',
+			coordinates: [lng, lat],
+			speed,
+			heading
+		},
 		timestamp: Date.now()
 	});
 	res.status(200).json({
 		status: 'success',
 		message: 'Location updated',
-		data: { tripId, latitude, longitude, speed, heading }
+		data: { tripId, location: { type: 'Point', coordinates: [lng, lat], speed, heading } }
 	});
 });
 

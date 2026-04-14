@@ -89,7 +89,7 @@
  */
 /**
  * @swagger
- * /api/driver/location:
+ * /api/v1/driver/location:
  *   post:
  *     summary: Stream driver GPS location
  *     description: Update and stream the driver’s current GPS location for a trip. Emits real-time updates via WebSocket.
@@ -104,24 +104,34 @@
  *             type: object
  *             required:
  *               - tripId
- *               - latitude
- *               - longitude
+ *               - location
  *             properties:
  *               tripId:
  *                 type: string
  *                 description: The trip ID
- *               latitude:
- *                 type: number
- *                 description: Latitude
- *               longitude:
- *                 type: number
- *                 description: Longitude
- *               speed:
- *                 type: number
- *                 description: (Optional) Speed in km/h
- *               heading:
- *                 type: number
- *                 description: (Optional) Heading in degrees
+ *               location:
+ *                 type: object
+ *                 required:
+ *                   - type
+ *                   - coordinates
+ *                 properties:
+ *                   type:
+ *                     type: string
+ *                     enum: [Point]
+ *                     example: Point
+ *                   coordinates:
+ *                     type: array
+ *                     items:
+ *                       type: number
+ *                     minItems: 2
+ *                     maxItems: 2
+ *                     description: [longitude, latitude]
+ *                   speed:
+ *                     type: number
+ *                     description: (Optional) Speed in km/h
+ *                   heading:
+ *                     type: number
+ *                     description: (Optional) Heading in degrees
  *     responses:
  *       200:
  *         description: Location updated
@@ -141,14 +151,21 @@
  *                   properties:
  *                     tripId:
  *                       type: string
- *                     latitude:
- *                       type: number
- *                     longitude:
- *                       type: number
- *                     speed:
- *                       type: number
- *                     heading:
- *                       type: number
+ *                     location:
+ *                       type: object
+ *                       properties:
+ *                         type:
+ *                           type: string
+ *                           example: Point
+ *                         coordinates:
+ *                           type: array
+ *                           items:
+ *                             type: number
+ *                           example: [73.8567, 18.5204]
+ *                         speed:
+ *                           type: number
+ *                         heading:
+ *                           type: number
  *       400:
  *         description: Validation error
  *       401:

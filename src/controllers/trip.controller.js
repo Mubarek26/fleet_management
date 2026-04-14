@@ -1,7 +1,35 @@
+const mongoose = require('mongoose');
+
 const Trip = require('../database/models/trip.model');
 const Order = require('../database/models/order.model');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
+
+
+// GET /api/v1/trips/company
+exports.getCompanyTrips = catchAsync(async (req, res, next) => {
+  const targetCompanyId = req.user.companyId;
+  if (!targetCompanyId) return next(new AppError('No companyId found on user', 400));
+
+  const trips = await Trip.aggregate([
+    {
+      $lookup: {
+        from: 'orders',
+        localField: 'orderId',
+        foreignField: '_id',
+        as: 'order'
+      }
+    },
+    { $unwind: '$order' },
+    { $match: { 'order.targetCompanyId': new mongoose.Types.ObjectId(targetCompanyId) } }
+  ]);
+
+  res.status(200).json({
+    status: 'success',
+    results: trips.length,
+    data: { trips }
+  });
+});
 
 
 // GET /api/trips/:id
