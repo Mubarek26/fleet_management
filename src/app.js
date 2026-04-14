@@ -1,4 +1,6 @@
 const pricingConfigRouter = require('./routes/pricingConfig.routes');
+const privateTransporterRouter = require('./routes/privateTransporter.routes');
+
 const configRouter = require('./routes/config.routes');
 const paymentRouter = require('./routes/payment.routes');
 const driverCommissionRouter = require('./routes/driverCommission.routes');
@@ -120,7 +122,8 @@ app.use('/api/v1/transactions', transactionRouter);
 app.use('/api/v1/config', configRouter);
 app.use('/api/v1/driver', driverCommissionRouter);
 app.use('/api/v1/driver', driverTripRouter);
-
+// Register private transporter application endpoint
+app.use('/api/v1/private-transporter', privateTransporterRouter);
 app.get("/health", (req, res) => {
 	res.status(200).json({
 		success: true,

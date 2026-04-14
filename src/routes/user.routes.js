@@ -4,11 +4,11 @@ const authController = require("../controllers/auth.controller");
 // const fs = require('fs');
 const userControllers = require("./../controllers/user.controller");
 const uploads = require("../middleware/uploads.middleware");
+const requireActiveStatus = require("../middleware/requireActiveStatus.middleware");
 const { createUser, getAllUsers, getUser, updateUsers, deleteUsers } =
   userControllers;
 const { signup, login } = authController;
 // const app = express();
-
 
 router.route("/login").post(login);
 router.route("/logout").get(authController.logout); // Route to log out user

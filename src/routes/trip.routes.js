@@ -1,3 +1,4 @@
+// Company: Get all trips under their control
 const express = require('express');
 const authController = require('../controllers/auth.controller');
 const requireActiveStatus = require('../middleware/requireActiveStatus.middleware');
@@ -6,6 +7,8 @@ const router = express.Router();
 
 router.use(authController.protect);
 router.use(requireActiveStatus);
+
+router.get('/company', authController.restrictTo('COMPANY_ADMIN'), tripController.getCompanyTrips);
 
 // PATCH /api/driver/trips/:id/milestone
 

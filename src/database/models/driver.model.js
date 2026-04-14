@@ -29,7 +29,7 @@ const driverSchema = new mongoose.Schema(
     companyId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Company",
-      required: true,
+      // required: true,
       index: true,
     },
     licenseNumber: {
