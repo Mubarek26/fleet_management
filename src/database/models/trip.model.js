@@ -57,6 +57,8 @@ const tripSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Order'
   },
+  // Geofences associated with this trip
+  geofences: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Geofence' }],
 
   driverId: {
     type: mongoose.Schema.Types.ObjectId,
