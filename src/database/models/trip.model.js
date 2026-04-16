@@ -11,7 +11,7 @@ const milestoneHistorySchema = new mongoose.Schema({
   at: { type: Date, default: Date.now }
 }, { _id: false });
 
-// Reusable GeoJSON Point schema
+// Reusable GeoJSON Point schema with timestamp
 const geoPointSchema = new mongoose.Schema({
   type: {
     type: String,
@@ -28,6 +28,11 @@ const geoPointSchema = new mongoose.Schema({
       },
       message: 'Coordinates must be [longitude, latitude]'
     }
+  },
+  timestamp: {
+    type: Date,
+    default: Date.now,
+    required: true
   }
 }, { _id: false });
 
