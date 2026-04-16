@@ -1,6 +1,7 @@
 // Assign driver and vehicle to order with validation
 
 
+
 const Order = require('../database/models/order.model');
 const Company = require('../database/models/company.model');
 const User = require('../database/models/user.model');
@@ -8,6 +9,7 @@ const brokerService = require('./broker.service');
 const AppError = require('../utils/appError');
 const Vehicle = require('../database/models/vehicle.model');
 const Trip = require('../database/models/trip.model');
+const Geofence = require('../database/models/geofence.model');
 
 exports.assignOrder = async (orderId, driverId, vehicleId) => {
 	if (!orderId || !driverId || !vehicleId) {
@@ -22,7 +24,6 @@ exports.assignOrder = async (orderId, driverId, vehicleId) => {
 	const driver = await User.findOne({ _id: driverId, active: true, status: 'ACTIVE' });
 	if (!driver) throw new AppError('Driver not found or inactive', 404);
 	// Check vehicle exists and is active
-	
 	const vehicle = await Vehicle.findOne({ _id: vehicleId, active: true, status: 'ACTIVE' });
 	if (!vehicle) throw new AppError('Vehicle not found or inactive', 404);
 	// Optionally, check vehicle is not already assigned to another order (except this one)
@@ -36,8 +37,59 @@ exports.assignOrder = async (orderId, driverId, vehicleId) => {
 	order.assignmentFailureReason = null;
 	await order.save();
 
-	// --- Trip creation logic ---
+	// Debug log for pickup and delivery location
+	// console.log('[assignOrder] pickupLocation:', order.pickupLocation);
+	// console.log('[assignOrder] deliveryLocation:', order.deliveryLocation);
 
+	// --- Geofence creation logic ---
+	const geofenceIds = [];
+	// Pickup geofence (Point)
+	if (order.pickupLocation && order.pickupLocation.longitude != null && order.pickupLocation.latitude != null) {
+		const pickupGeofence = await Geofence.create({
+			name: 'Pickup Location',
+			type: 'start',
+			geometry: {
+				type: 'Point',
+				coordinates: [order.pickupLocation.longitude, order.pickupLocation.latitude]
+			},
+			radius: 100 // meters, adjust as needed
+		});
+		geofenceIds.push(pickupGeofence._id);
+	}
+	// Delivery geofence (Point)
+	if (order.deliveryLocation && order.deliveryLocation.longitude != null && order.deliveryLocation.latitude != null) {
+		const deliveryGeofence = await Geofence.create({
+			name: 'Delivery Location',
+			type: 'destination',
+			geometry: {
+				type: 'Point',
+				coordinates: [order.deliveryLocation.longitude, order.deliveryLocation.latitude]
+			},
+			radius: 100 // meters, adjust as needed
+		});
+		geofenceIds.push(deliveryGeofence._id);
+	}
+	// Route corridor geofence (LineString)
+	if (
+		order.pickupLocation && order.pickupLocation.longitude != null && order.pickupLocation.latitude != null &&
+		order.deliveryLocation && order.deliveryLocation.longitude != null && order.deliveryLocation.latitude != null
+	) {
+		const corridorGeofence = await Geofence.create({
+			name: 'Route Corridor',
+			type: 'corridor',
+			geometry: {
+				type: 'LineString',
+				coordinates: [
+					[order.pickupLocation.longitude, order.pickupLocation.latitude],
+					[order.deliveryLocation.longitude, order.deliveryLocation.latitude]
+				]
+			},
+			buffer: 0.2 // kilometers, adjust as needed
+		});
+		geofenceIds.push(corridorGeofence._id);
+	}
+
+	// --- Trip creation logic ---
 	const existingTrip = await Trip.findOne({ orderId: order._id });
 	if (!existingTrip) {
 		await Trip.create({
@@ -45,7 +97,8 @@ exports.assignOrder = async (orderId, driverId, vehicleId) => {
 			driverId,
 			vehicleId,
 			milestone: 'STARTED',
-			milestoneHistory: [{ milestone: 'STARTED', at: new Date() }]
+			milestoneHistory: [{ milestone: 'STARTED', at: new Date() }],
+			geofences: geofenceIds
 		});
 	}
 

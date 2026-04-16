@@ -547,6 +547,24 @@ const options = {
             status: { type: 'string', example: 'fail' },
             message: { type: 'string', example: 'No company found with that ID' }
           }
+        },
+        Geofence: {
+          type: 'object',
+          required: ['name', 'type', 'geometry'],
+          properties: {
+            name: { type: 'string', example: 'Pickup Location' },
+            type: { type: 'string', enum: ['start', 'destination', 'corridor', 'restricted'], example: 'start' },
+            geometry: {
+              type: 'object',
+              required: ['type', 'coordinates'],
+              properties: {
+                type: { type: 'string', enum: ['Point', 'Polygon', 'LineString'], example: 'Point' },
+                coordinates: { type: 'array', items: { type: 'number' }, example: [38.7578, 8.9806] }
+              }
+            },
+            radius: { type: 'number', example: 100, description: 'For Point geofences (meters)' },
+            buffer: { type: 'number', example: 0.2, description: 'For corridor geofences (kilometers)' }
+          }
         }
       }
     }

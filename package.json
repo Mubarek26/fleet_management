@@ -8,6 +8,7 @@
 		"dev": "nodemon src/server.js"
 	},
 	"dependencies": {
+		"@turf/turf": "^7.3.4",
 		"axios": "^1.14.0",
 		"bcryptjs": "^3.0.3",
 		"cookie-parser": "^1.4.7",
