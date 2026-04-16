@@ -1,7 +1,7 @@
 
 
 const turf = require('@turf/turf');
-const Geofence = require('../database/models/geofence.model');
+const Geofence = require('../database/models/Geofence.model');
 const Trip = require('../database/models/trip.model');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
