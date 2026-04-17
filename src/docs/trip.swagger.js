@@ -76,11 +76,22 @@
  *     security:
  *       - bearerAuth: []
  *     requestBody:
+ *       description: |
+ *         Fields used when creating a trip. Required: `location` (GeoJSON Point) and `driverId` (ObjectId) per the Trip model. Optional: `orderId`, `geofences`, `vehicleId`. Do NOT send `locationHistory` — the server derives it from `location`.
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/Trip'
+ *           example:
+ *             orderId: "647f1f3e1c4a3b2f8c9d0e1a"
+ *             geofences:
+ *               - "647f1f3e1c4a3b2f8c9d0e2b"
+ *             driverId: "647f1f3e1c4a3b2f8c9d0e1b"
+ *             vehicleId: "647f1f3e1c4a3b2f8c9d0e1c"
+ *             location:
+ *               type: "Point"
+ *               coordinates: [3.3792, 6.5244]
  *     responses:
  *       201:
  *         description: Trip created
@@ -119,11 +130,19 @@
  *           type: string
  *         description: The trip ID
  *     requestBody:
+ *       description: |
+ *         Allowed fields when updating a trip. If `location` (GeoJSON Point) is provided, the server will update `location` and append to `locationHistory`. Do not send `locationHistory` directly. Other updatable fields include `driverId`, `vehicleId`, `milestone`, `lastNote`, `proofOfDelivery` and `deliveryOtp`.
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/Trip'
+ *           example:
+ *             location:
+ *               type: "Point"
+ *               coordinates: [3.3800, 6.5250]
+ *             milestone: "ARRIVED"
+ *             lastNote: "Driver arrived at pickup"
  *     responses:
  *       200:
  *         description: Trip updated
@@ -261,6 +280,12 @@
  *               note:
  *                 type: string
  *                 description: Optional note about the milestone
+ *           example:
+ *             milestone: "ARRIVED"
+ *             location:
+ *               lat: 6.5245
+ *               lng: 3.3793
+ *             note: "Arrived at pickup location"
  *     responses:
  *       200:
  *         description: Trip milestone updated
