@@ -19,6 +19,9 @@ const storage = multer.diskStorage({
       case "licensePhoto":
         cb(null, "uploads/users");
         break;
+      case "nationalIdOrPassportImage":
+        cb(null, "uploads/users");
+        break;
       case "logo":
         cb(null, "uploads/restaurants");
         break;
