@@ -1,7 +1,5 @@
 // Assign driver and vehicle to order with validation
 
-
-
 const Order = require('../database/models/order.model');
 const Company = require('../database/models/company.model');
 const User = require('../database/models/user.model');

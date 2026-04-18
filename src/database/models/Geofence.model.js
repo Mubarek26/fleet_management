@@ -7,8 +7,9 @@ const geofenceSchema = new mongoose.Schema({
     type: { type: String, enum: ['Polygon', 'Point', 'LineString'], required: true },
     coordinates: { type: Array, required: true },
   },
-  radius: Number, // For circles (in meters), optional
-  buffer: Number, // For corridors (in km), optional
+  radius: Number, 
+  buffer: Number, 
 });
 
-module.exports = mongoose.model('Geofence', geofenceSchema);
+// CHECK: Use existing model if it exists, otherwise create it
+module.exports = mongoose.models.Geofence || mongoose.model('Geofence', geofenceSchema);
