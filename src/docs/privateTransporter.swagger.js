@@ -55,6 +55,9 @@
  *               profilePhoto:
  *                 type: string
  *                 format: binary
+ *               nationalIdOrPassportImage:
+ *                 type: string
+ *                 format: binary
  *               vehicleModel:
  *                 type: string
  *               vehicleCapacityKg:

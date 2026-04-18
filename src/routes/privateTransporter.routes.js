@@ -10,7 +10,8 @@ const authController = require('../controllers/auth.controller');
 router.post('/apply', authController.protect, upload.fields([
   { name: 'driversLicenseImage', maxCount: 1 },
   { name: 'vehicleRegistrationImage', maxCount: 1 },
-  { name: 'profilePhoto', maxCount: 1 }
+  { name: 'profilePhoto', maxCount: 1 },
+  { name: 'nationalIdOrPassportImage', maxCount: 1 }
 ]), privateTransporterController.apply);
 
 // Get my application (protected)

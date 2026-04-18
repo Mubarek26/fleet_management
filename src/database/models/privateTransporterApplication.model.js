@@ -14,7 +14,8 @@ const privateTransporterApplicationSchema = new mongoose.Schema({
   uploads: {
     driversLicenseImage: { type: String },
     vehicleRegistrationImage: { type: String },
-    profilePhoto: { type: String }
+    profilePhoto: { type: String },
+    nationalIdOrPassportImage: { type: String }
   },
   yearsOfExperience: { type: Number, required: true },
   availability: { type: String, enum: ['full-time', 'part-time'], required: true },

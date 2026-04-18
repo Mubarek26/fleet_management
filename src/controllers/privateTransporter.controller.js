@@ -37,7 +37,8 @@ exports.apply = async (req, res) => {
     const uploads = {
       driversLicenseImage: req.files?.driversLicenseImage?.[0]?.path || '',
       vehicleRegistrationImage: req.files?.vehicleRegistrationImage?.[0]?.path || '',
-      profilePhoto: req.files?.profilePhoto?.[0]?.path || ''
+      profilePhoto: req.files?.profilePhoto?.[0]?.path || '',
+      nationalIdOrPassportImage: req.files?.nationalIdOrPassportImage?.[0]?.path || ''
     };
 
     const application = new PrivateTransporterApplication({
