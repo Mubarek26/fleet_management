@@ -9,7 +9,6 @@ const upload = require('../middleware/uploads.middleware');
 const requireActiveStatus = require('../middleware/requireActiveStatus.middleware');
 // Protect all routes after this middleware
 router.use(authController.protect);
-router.use(requireActiveStatus);
 
 // Approve user (SUPER_ADMIN only)
 router.route('/users/:id/approve').put(authController.restrictTo('SUPER_ADMIN'), companyController.approveUser);
