@@ -1,36 +1,54 @@
 const multer = require("multer");
 const AppError = require("../utils/appError");
 const path = require("path");
+const fs = require("fs");
 
 // Set up storage for uploaded files
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     // Choose folder based on file field name
+    let uploadDir = "uploads/users/others";
+
     switch (file.fieldname) {
       case "image":
-        cb(null, "uploads/foods");
+        uploadDir = "uploads/users";
         break;
       case "photo":
-        cb(null, "uploads/users");
+        uploadDir = "uploads/users";
         break;
       case "driverPhoto":
-        cb(null, "uploads/users");
+        uploadDir = "uploads/users";
         break;
       case "licensePhoto":
-        cb(null, "uploads/users");
+        uploadDir = "uploads/users";
         break;
       case "nationalIdOrPassportImage":
-        cb(null, "uploads/users");
+        uploadDir = "uploads/users";
         break;
       case "logo":
-        cb(null, "uploads/restaurants");
+        uploadDir = "uploads/users";
         break;
       case "banner":
-        cb(null, "uploads/restaurants");
+        uploadDir = "uploads/users";
+        break;
+      case "driversLicenseImage":
+        uploadDir = "uploads/users";
+        break;
+      case "vehicleRegistrationImage":
+        uploadDir = "uploads/users";
+        break;
+      case "profilePhoto":
+        uploadDir = "uploads/users";
         break;
       default:
-        cb(null, "uploads/restaurants/others"); // fallback
+        uploadDir = "uploads/users/others"; // fallback
     }
+
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
     const uniqueName = Date.now() + path.extname(file.originalname);
