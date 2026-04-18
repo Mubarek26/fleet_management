@@ -145,6 +145,31 @@ exports.getCompany = catchAsync(async (req, res, next) => {
 
 });
 
+// get the authenticated company admin's company
+exports.getMyCompany = catchAsync(async (req, res, next) => {
+    
+    let company = null;
+
+    if (req.user.companyId) {
+        company = await Company.findById(req.user.companyId);
+    }
+
+    if (!company) {
+        company = await Company.findOne({ ownerId: req.user._id });
+    }
+
+    if (!company) {
+        return next(new appError('No company found for this user', 404));
+    }
+
+    res.status(200).json({
+        status: 'success',
+        data: {
+            company
+        }
+    });
+});
+
 // get all companies
 exports.getAllCompanies = catchAsync(async (req, res, next) => {
     const features = new APIFeatures(Company.find(), req.query)

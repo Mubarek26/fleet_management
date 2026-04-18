@@ -172,6 +172,36 @@
 
 /**
  * @swagger
+ * /api/v1/company/me:
+ *   get:
+ *     summary: Get authenticated company admin's company
+ *     tags: [Company]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Company fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     company:
+ *                       $ref: '#/components/schemas/Company'
+ *       403:
+ *         description: Only COMPANY_ADMIN users can access their company
+ *       404:
+ *         description: Company not found
+ */
+
+/**
+ * @swagger
  * /api/v1/company/{id}:
  *   get:
  *     summary: Get a company by ID
