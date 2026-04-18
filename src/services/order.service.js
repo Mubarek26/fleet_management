@@ -7,7 +7,7 @@ const brokerService = require('./broker.service');
 const AppError = require('../utils/appError');
 const Vehicle = require('../database/models/vehicle.model');
 const Trip = require('../database/models/trip.model');
-const Geofence = require('../database/models/geofence.model');
+const Geofence = require('../database/models/Geofence.model');
 
 exports.assignOrder = async (orderId, driverId, vehicleId) => {
 	if (!orderId || !driverId || !vehicleId) {
