@@ -23,6 +23,10 @@ router
   .get(companyController.getAllCompanies)
   .post(upload.single('photo'), companyController.createCompany);
 
+router
+  .route('/me')
+  .get(authController.protect, authController.restrictTo('COMPANY_ADMIN', 'SUPER_ADMIN'), companyController.getMyCompany);
+
 
 router
 .route('/vehicles')
