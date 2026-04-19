@@ -40,6 +40,15 @@ const storage = multer.diskStorage({
       case "profilePhoto":
         uploadDir = "uploads/users";
         break;
+      case "businessLicenseImage":
+        uploadDir = "uploads/users";
+        break;
+      case "taxIdImage":
+        uploadDir = "uploads/users";
+        break;
+      case "companyProfileImage":
+        uploadDir = "uploads/users";
+        break;
       default:
         uploadDir = "uploads/users/others"; // fallback
     }

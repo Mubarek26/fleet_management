@@ -1,5 +1,6 @@
 const pricingConfigRouter = require('./routes/pricingConfig.routes');
 const privateTransporterRouter = require('./routes/privateTransporter.routes');
+const vendorApplicationRouter = require('./routes/vendorApplication.routes');
 
 const configRouter = require('./routes/config.routes');
 const paymentRouter = require('./routes/payment.routes');
@@ -127,6 +128,7 @@ app.use('/api/v1/driver', driverCommissionRouter);
 app.use('/api/v1/driver', driverTripRouter);
 // Register private transporter application endpoint
 app.use('/api/v1/private-transporter', privateTransporterRouter);
+app.use('/api/v1/vendor', vendorApplicationRouter);
 app.use('/api/v1/geofences', geofenceRouter);
 app.get("/health", (req, res) => {
 	res.status(200).json({
