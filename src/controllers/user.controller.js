@@ -3,6 +3,7 @@ const AppError = require('../utils/appError');
 const catchAsync = require('../utils/catchAsync');
 const factory = require('./handlerFactory.controller'); // Import the handler factory
 const User = require('../database/models/user.model');
+const { uploadMulterFile } = require('../utils/cloudinaryUpload');
 // const { use } = require('react');
 const router = express.Router();
 // const fs = require('fs');
@@ -23,7 +24,11 @@ exports.updateMe = catchAsync(async (req, res, next) => {
       )
     );
   }
-  const photo = req.file ? req.file.filename : undefined;
+  let photo;
+  if (req.file) {
+    const upload = await uploadMulterFile(req.file, { folder: 'users' });
+    photo = upload?.secure_url;
+  }
   // 2. Filter out unwanted fields names that are not allowed to be updated
   const filteredBody = {};
   const allowedFields = ['name', 'photo', 'status', 'phoneNumber'];

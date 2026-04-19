@@ -14,6 +14,7 @@ const catchAsync = require('../utils/catchAsync');
 const APIFeatures = require('../utils/apiFeatures');
 const sendEmail = require('../utils/email');
 const { sendSMS } = require('../services/afromessage.service');
+const { uploadMulterFile } = require('../utils/cloudinaryUpload');
 exports.approveUser = catchAsync(async (req, res, next) => {
     // Only SUPER_ADMIN can approve
     if (!req.user || req.user.role !== 'SUPER_ADMIN') {
@@ -106,10 +107,20 @@ exports.createCompany = catchAsync(async (req, res, next) => {
         return next(new appError('Only COMPANY_ADMIN users can create a company', 403));
     }
 
+    let photoUrl = null;
+    if (req.file) {
+        const upload = await uploadMulterFile(req.file, { folder: 'companies' });
+        photoUrl = upload?.secure_url || null;
+    }
+
     const payload = {
         ...req.body,
         ownerId: req.user._id
     };
+
+    if (photoUrl) {
+        payload.photo = photoUrl;
+    }
 
     const newCompany = await Company.create(payload);
 
@@ -189,7 +200,16 @@ exports.getAllCompanies = catchAsync(async (req, res, next) => {
 
 // update a company
 exports.updateCompany = catchAsync(async (req, res, next) => {
-    const company = await Company.findByIdAndUpdate(req.params.id, req.body, {
+    const updatePayload = { ...req.body };
+
+    if (req.file) {
+        const upload = await uploadMulterFile(req.file, { folder: 'companies' });
+        if (upload?.secure_url) {
+            updatePayload.photo = upload.secure_url;
+        }
+    }
+
+    const company = await Company.findByIdAndUpdate(req.params.id, updatePayload, {
         new: true,
         runValidators: true
     });
@@ -227,8 +247,14 @@ exports.addDriverToCompany = catchAsync(async (req, res, next) => {
     }
 
     const { fullName, phoneNumber, email, password, licenseNumber, status, userStatus } = req.body;
-    const driverPhoto = req.files?.driverPhoto?.[0]?.filename || req.body.driverPhoto || null;
-    const licensePhoto = req.files?.licensePhoto?.[0]?.filename || req.body.licensePhoto || null;
+
+    const [driverPhotoUpload, licensePhotoUpload] = await Promise.all([
+        uploadMulterFile(req.files?.driverPhoto?.[0], { folder: 'drivers' }),
+        uploadMulterFile(req.files?.licensePhoto?.[0], { folder: 'drivers' })
+    ]);
+
+    const driverPhoto = driverPhotoUpload?.secure_url || req.body.driverPhoto || null;
+    const licensePhoto = licensePhotoUpload?.secure_url || req.body.licensePhoto || null;
 
     if (!fullName || !phoneNumber || !email || !password) {
         return next(new appError('fullName, phoneNumber, email and password are required', 400));
@@ -325,8 +351,14 @@ exports.updateCompanyDriver = catchAsync(async (req, res, next) => {
         return next(new appError('No driver found with that ID', 404));
     }
     const { fullName, phoneNumber, email, licenseNumber, status, userStatus } = req.body;
-    const driverPhoto = req.files?.driverPhoto?.[0]?.filename || req.body.driverPhoto || driver.driverPhoto;
-    const licensePhoto = req.files?.licensePhoto?.[0]?.filename || req.body.licensePhoto || driver.licensePhoto;
+
+    const [driverPhotoUpload, licensePhotoUpload] = await Promise.all([
+        uploadMulterFile(req.files?.driverPhoto?.[0], { folder: 'drivers' }),
+        uploadMulterFile(req.files?.licensePhoto?.[0], { folder: 'drivers' })
+    ]);
+
+    const driverPhoto = driverPhotoUpload?.secure_url || req.body.driverPhoto || driver.driverPhoto;
+    const licensePhoto = licensePhotoUpload?.secure_url || req.body.licensePhoto || driver.licensePhoto;
     if (fullName) driver.fullName = fullName;
     if (phoneNumber) driver.phoneNumber = phoneNumber;
     if (email) driver.email = email.toLowerCase();

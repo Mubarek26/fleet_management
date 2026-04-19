@@ -4,7 +4,7 @@ const Order = require('../database/models/order.model');
 const { sendSMS } = require('../services/afromessage.service');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
-const cloudinary = require('../config/cloudinary');
+const { uploadMulterFile } = require('../utils/cloudinaryUpload');
  const { handleProofOfDeliveryOtp } = require('../services/tripProof.service');
 // POST /api/driver/trips/:id/evidence
 exports.uploadProofOfDelivery = catchAsync(async (req, res, next) => {
@@ -15,9 +15,8 @@ exports.uploadProofOfDelivery = catchAsync(async (req, res, next) => {
 
   let fileUrl = null;
   if (req.file) {
-    // Upload to cloudinary
-    const upload = await cloudinary.uploader.upload(req.file.path, { folder: 'proofs' });
-    fileUrl = upload.secure_url;
+    const upload = await uploadMulterFile(req.file, { folder: 'trip-proofs' });
+    fileUrl = upload?.secure_url || null;
   }
 
   const { type, note } = req.body;

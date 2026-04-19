@@ -8,6 +8,7 @@ const { send } = require("process");
 const sendEmail = require("../utils/email");
 const validator = require("validator");
 const path = require("path");
+const { uploadMulterFile } = require("../utils/cloudinaryUpload");
 const singToken = async (id) => {
   return jwt.sign({ id: id }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN,
@@ -38,14 +39,19 @@ const createSendToken = async (user, statusCode, res) => {
   });
 };
 exports.signup = catchAsync(async (req, res, next) => {
-    const photoFilename = req.file ? req.file.filename : req.body.photo;
-      const normalizedRole = (req.body.role || "SHIPPER").toUpperCase();
+  let photoUrl = req.body.photo;
+  if (req.file) {
+    const upload = await uploadMulterFile(req.file, { folder: "users" });
+    photoUrl = upload?.secure_url;
+  }
+
+  const normalizedRole = (req.body.role || "SHIPPER").toUpperCase();
   const newUser = await User.create({
     fullName: req.body.fullName,
     email: req.body.email,
     password: req.body.password,
     passwordConfirm: req.body.passwordConfirm,
-    photo: photoFilename || "default.jpg", // Default photo if not provided
+    photo: photoUrl || "default.jpg", // Default photo if not provided
     phoneNumber: req.body.phoneNumber, // Add phone number field
     // passwordChangedAt: req.body.passwordChangedAt || Date.now(),
     role: normalizedRole, // Default role if not provided
