@@ -73,7 +73,7 @@ exports.approveCompany = catchAsync(async (req, res, next) => {
     // if (company.status === 'ACTIVE') {
     //     return next(new appError('Company is already active', 400));
     // }
-    company.status = 'ACTIVE';
+    company.status = 'APPROVED';
     await company.save();
     // Send email notification to the company owner 
     const owner = await User.findById(company.ownerId);
