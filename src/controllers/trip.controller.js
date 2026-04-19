@@ -34,7 +34,10 @@ exports.getCompanyTrips = catchAsync(async (req, res, next) => {
 
 // GET /api/trips/:id
 exports.getTripById = catchAsync(async (req, res, next) => {
-  const trip = await Trip.findById(req.params.id);
+  const trip = await Trip.findById(req.params.id)
+    .populate('driverId')
+    .populate('orderId')
+    .populate('vehicleId');
   if (!trip) return next(new AppError('Trip not found', 404));
   res.status(200).json({ status: 'success', data: { trip } });
 });
@@ -42,7 +45,10 @@ exports.getTripById = catchAsync(async (req, res, next) => {
 // GET /api/trips
 exports.getAllTrips = catchAsync(async (req, res, next) => {
   // Add filters as needed (e.g., by user, driver, status)
-  const trips = await Trip.find();
+  const trips = await Trip.find()
+    .populate('driverId')
+    .populate('orderId')
+    .populate('vehicleId');
   res.status(200).json({ status: 'success', results: trips.length, data: { trips } });
 });
 
