@@ -1,12 +1,13 @@
 const swaggerJsdoc = require('swagger-jsdoc');
+const path = require('path');
 
 const PORT = process.env.PORT || 5000;
 
 const options = {
   apis: [
-    './src/docs/*.js',
-    './src/routes/*.js',
-    './src/controllers/*.js',
+    path.join(__dirname, '..', 'docs', '*.js'),
+    path.join(__dirname, '..', 'routes', '*.js'),
+    path.join(__dirname, '..', 'controllers', '*.js'),
   ],
   definition: {
     openapi: '3.0.3',
@@ -584,7 +585,8 @@ const options = {
     './src/docs/config.swagger.js',
     './src/docs/driverCommission.swagger.js',
     './src/docs/driverTrip.swagger.js',
-    './src/docs/privateTransporter.swagger.js'
+    './src/docs/privateTransporter.swagger.js',
+    './src/docs/vendorApplication.swagger.js',
   ]
 };
 
