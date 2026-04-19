@@ -2,6 +2,7 @@ const PrivateTransporterApplication = require('../database/models/privateTranspo
 const Driver = require('../database/models/driver.model');
 const Vehicle = require('../database/models/vehicle.model');
 const { sendSMS } = require('../services/afromessage.service');
+const { uploadMulterFile } = require('../utils/cloudinaryUpload');
 
 // POST /api/private-transporter/apply
 exports.apply = async (req, res) => {
@@ -34,11 +35,18 @@ exports.apply = async (req, res) => {
     }
 
     // Handle file uploads if using multer or similar middleware
+    const [driversLicenseUpload, vehicleRegistrationUpload, profilePhotoUpload, nationalIdUpload] = await Promise.all([
+      uploadMulterFile(req.files?.driversLicenseImage?.[0], { folder: 'private-transporter' }),
+      uploadMulterFile(req.files?.vehicleRegistrationImage?.[0], { folder: 'private-transporter' }),
+      uploadMulterFile(req.files?.profilePhoto?.[0], { folder: 'private-transporter' }),
+      uploadMulterFile(req.files?.nationalIdOrPassportImage?.[0], { folder: 'private-transporter' })
+    ]);
+
     const uploads = {
-      driversLicenseImage: req.files?.driversLicenseImage?.[0]?.path || '',
-      vehicleRegistrationImage: req.files?.vehicleRegistrationImage?.[0]?.path || '',
-      profilePhoto: req.files?.profilePhoto?.[0]?.path || '',
-      nationalIdOrPassportImage: req.files?.nationalIdOrPassportImage?.[0]?.path || ''
+      driversLicenseImage: driversLicenseUpload?.secure_url || '',
+      vehicleRegistrationImage: vehicleRegistrationUpload?.secure_url || '',
+      profilePhoto: profilePhotoUpload?.secure_url || '',
+      nationalIdOrPassportImage: nationalIdUpload?.secure_url || ''
     };
 
     const application = new PrivateTransporterApplication({

@@ -1,4 +1,5 @@
 const VendorApplication = require('../database/models/vendorApplication.model');
+const { uploadMulterFile } = require('../utils/cloudinaryUpload');
 
 // POST /api/v1/vendor/apply
 exports.apply = async (req, res) => {
@@ -28,10 +29,16 @@ exports.apply = async (req, res) => {
       return res.status(400).json({ message: 'You have already submitted an application.' });
     }
 
+    const [businessLicenseUpload, taxIdUpload, companyProfileUpload] = await Promise.all([
+      uploadMulterFile(req.files?.businessLicenseImage?.[0], { folder: 'vendor-applications' }),
+      uploadMulterFile(req.files?.taxIdImage?.[0], { folder: 'vendor-applications' }),
+      uploadMulterFile(req.files?.companyProfileImage?.[0], { folder: 'vendor-applications' })
+    ]);
+
     const uploads = {
-      businessLicenseImage: req.files?.businessLicenseImage?.[0]?.path || '',
-      taxIdImage: req.files?.taxIdImage?.[0]?.path || '',
-      companyProfileImage: req.files?.companyProfileImage?.[0]?.path || ''
+      businessLicenseImage: businessLicenseUpload?.secure_url || '',
+      taxIdImage: taxIdUpload?.secure_url || '',
+      companyProfileImage: companyProfileUpload?.secure_url || ''
     };
 
     const application = new VendorApplication({

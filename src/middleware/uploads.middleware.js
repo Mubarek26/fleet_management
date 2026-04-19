@@ -1,69 +1,7 @@
 const multer = require("multer");
 const AppError = require("../utils/appError");
-const path = require("path");
-const fs = require("fs");
 
-// Set up storage for uploaded files
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    // Choose folder based on file field name
-    let uploadDir = "uploads/users/others";
-
-    switch (file.fieldname) {
-      case "image":
-        uploadDir = "uploads/users";
-        break;
-      case "photo":
-        uploadDir = "uploads/users";
-        break;
-      case "driverPhoto":
-        uploadDir = "uploads/users";
-        break;
-      case "licensePhoto":
-        uploadDir = "uploads/users";
-        break;
-      case "nationalIdOrPassportImage":
-        uploadDir = "uploads/users";
-        break;
-      case "logo":
-        uploadDir = "uploads/users";
-        break;
-      case "banner":
-        uploadDir = "uploads/users";
-        break;
-      case "driversLicenseImage":
-        uploadDir = "uploads/users";
-        break;
-      case "vehicleRegistrationImage":
-        uploadDir = "uploads/users";
-        break;
-      case "profilePhoto":
-        uploadDir = "uploads/users";
-        break;
-      case "businessLicenseImage":
-        uploadDir = "uploads/users";
-        break;
-      case "taxIdImage":
-        uploadDir = "uploads/users";
-        break;
-      case "companyProfileImage":
-        uploadDir = "uploads/users";
-        break;
-      default:
-        uploadDir = "uploads/users/others"; // fallback
-    }
-
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueName = Date.now() + path.extname(file.originalname);
-    cb(null, uniqueName);
-  },
-});
+const storage = multer.memoryStorage();
 
 // file filter
 const fileFilter = (req, file, cb) => {
