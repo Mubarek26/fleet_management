@@ -198,6 +198,35 @@ exports.getAllCompanies = catchAsync(async (req, res, next) => {
     });
 });
 
+// get all vehicles (SUPER_ADMIN only)
+exports.getAllVehicles = catchAsync(async (req, res, next) => {
+    if (!req.user || req.user.role !== 'SUPER_ADMIN') {
+        return next(new appError('Only SUPER_ADMIN can access all vehicles', 403));
+    }
+
+    const features = new APIFeatures(
+        Vehicle.find().populate([
+            { path: 'companyId' },
+            { path: 'currentDriverId' }
+        ]),
+        req.query
+    )
+        .filter()
+        .sort()
+        .limitFields()
+        .paginate();
+
+    const vehicles = await features.query;
+
+    res.status(200).json({
+        status: 'success',
+        results: vehicles.length,
+        data: {
+            vehicles
+        }
+    });
+});
+
 // update a company
 exports.updateCompany = catchAsync(async (req, res, next) => {
     const updatePayload = { ...req.body };

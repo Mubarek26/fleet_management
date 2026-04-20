@@ -33,6 +33,10 @@ router
 .get(companyController.getCompanyVehicles)
 .post(companyController.createCompanyVehicle);
 
+router
+  .route('/vehicles/all')
+  .get(authController.restrictTo('SUPER_ADMIN'), companyController.getAllVehicles);
+
 
 router
     .route('/:id')
