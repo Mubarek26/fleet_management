@@ -329,6 +329,78 @@
 
 /**
  * @swagger
+ * /api/v1/company/vehicles/all:
+ *   get:
+ *     summary: Get all vehicles (SUPER_ADMIN)
+ *     description: Returns all vehicles with company and current driver populated.
+ *     tags: [Company]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: companyId
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [ACTIVE, INACTIVE, MAINTENANCE]
+ *       - in: query
+ *         name: vehicleType
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: active
+ *         schema:
+ *           type: boolean
+ *       - in: query
+ *         name: currentDriverId
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: fields
+ *         schema:
+ *           type: string
+ *         description: Comma-separated list of fields to include
+ *     responses:
+ *       200:
+ *         description: Vehicles fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 results:
+ *                   type: integer
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     vehicles:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Vehicle'
+ *       403:
+ *         description: Only SUPER_ADMIN can access all vehicles
+ */
+
+/**
+ * @swagger
  * /api/v1/company/{id}/drivers:
  *   get:
  *     summary: Get drivers for a company
