@@ -37,6 +37,10 @@ router
   .route('/vehicles/all')
   .get(authController.restrictTo('SUPER_ADMIN'), companyController.getAllVehicles);
 
+router
+  .route('/drivers/all')
+  .get(authController.restrictTo('SUPER_ADMIN'), companyController.getAllDrivers);
+
 
 router
     .route('/:id')
