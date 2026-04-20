@@ -227,6 +227,35 @@ exports.getAllVehicles = catchAsync(async (req, res, next) => {
     });
 });
 
+// get all drivers (SUPER_ADMIN only)
+exports.getAllDrivers = catchAsync(async (req, res, next) => {
+    if (!req.user || req.user.role !== 'SUPER_ADMIN') {
+        return next(new appError('Only SUPER_ADMIN can access all drivers', 403));
+    }
+
+    const features = new APIFeatures(
+        Driver.find().populate([
+            { path: 'companyId' },
+            { path: 'userId' }
+        ]),
+        req.query
+    )
+        .filter()
+        .sort()
+        .limitFields()
+        .paginate();
+
+    const drivers = await features.query;
+
+    res.status(200).json({
+        status: 'success',
+        results: drivers.length,
+        data: {
+            drivers
+        }
+    });
+});
+
 // update a company
 exports.updateCompany = catchAsync(async (req, res, next) => {
     const updatePayload = { ...req.body };
