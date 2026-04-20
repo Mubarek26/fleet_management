@@ -236,7 +236,8 @@ exports.getAllDrivers = catchAsync(async (req, res, next) => {
     const features = new APIFeatures(
         Driver.find().populate([
             { path: 'companyId' },
-            { path: 'userId' }
+            { path: 'userId' },
+            { path: 'currentVehicleId' }
         ]),
         req.query
     )
