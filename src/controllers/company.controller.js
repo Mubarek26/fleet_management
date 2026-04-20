@@ -390,7 +390,11 @@ exports.getCompanyDrivers = catchAsync(async (req, res, next) => {
     }
 
     // Continue with the rest of the logic to fetch drivers for the company
-    const drivers = await Driver.find({ companyId: company._id });
+    const drivers = await Driver.find({ companyId: company._id }).populate([
+        { path: 'companyId' },
+        { path: 'userId' },
+        { path: 'currentVehicleId' }
+    ]);
 
     res.status(200).json({
         status: 'success',
