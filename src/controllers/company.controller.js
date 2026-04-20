@@ -474,7 +474,10 @@ exports.getCompanyVehicles = catchAsync(async (req, res, next) => {
         return next(new appError('No company found for the authenticated user', 404));
     }
     // Continue with the rest of the logic to fetch vehicles for the company
-    const vehicles = await Vehicle.find({ companyId });
+    const vehicles = await Vehicle.find({ companyId }).populate([
+        { path: 'companyId' },
+        { path: 'currentDriverId' }
+    ]);
     res.status(200).json({
         status: 'success',
         results: vehicles.length,
