@@ -9,27 +9,8 @@ const AppError = require('../utils/appError');
 // GET /api/v1/trips/company
 exports.getCompanyTrips = catchAsync(async (req, res, next) => {
   const targetCompanyId = req.user.companyId;
-  console.log('[getCompanyTrips] req.user._id:', req.user._id);
-  console.log('[getCompanyTrips] req.user.role:', req.user.role);
-  console.log('[getCompanyTrips] req.user.companyId:', targetCompanyId);
 
   if (!targetCompanyId) return next(new AppError('No companyId found on user', 400));
-
-  // Debug: count all trips in DB
-  const totalTrips = await Trip.countDocuments();
-  console.log('[getCompanyTrips] Total trips in DB:', totalTrips);
-
-  // Debug: check if any orders have this targetCompanyId
-  const matchingOrders = await Order.find({ targetCompanyId: targetCompanyId }).select('_id targetCompanyId status assignmentMode');
-  console.log('[getCompanyTrips] Orders with targetCompanyId:', matchingOrders.length);
-  if (matchingOrders.length > 0) {
-    console.log('[getCompanyTrips] Sample matching order:', JSON.stringify(matchingOrders[0]));
-  }
-
-  // Debug: check if any trips have orderId pointing to those orders
-  const matchingOrderIds = matchingOrders.map(o => o._id);
-  const tripsWithMatchingOrders = await Trip.find({ orderId: { $in: matchingOrderIds } }).select('_id orderId driverId milestone');
-  console.log('[getCompanyTrips] Trips linked to matching orders:', tripsWithMatchingOrders.length);
 
   const trips = await Trip.aggregate([
     {
@@ -37,14 +18,32 @@ exports.getCompanyTrips = catchAsync(async (req, res, next) => {
         from: 'orders',
         localField: 'orderId',
         foreignField: '_id',
-        as: 'order'
+        as: 'orderId'
       }
     },
-    { $unwind: '$order' },
-    { $match: { 'order.targetCompanyId': new mongoose.Types.ObjectId(targetCompanyId) } }
+    { $unwind: '$orderId' },
+    {
+      $match: { 'orderId.targetCompanyId': new mongoose.Types.ObjectId(targetCompanyId) }
+    },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'driverId',
+        foreignField: '_id',
+        as: 'driverId'
+      }
+    },
+    { $unwind: { path: '$driverId', preserveNullAndEmptyArrays: true } },
+    {
+      $lookup: {
+        from: 'vehicles',
+        localField: 'vehicleId',
+        foreignField: '_id',
+        as: 'vehicleId'
+      }
+    },
+    { $unwind: { path: '$vehicleId', preserveNullAndEmptyArrays: true } }
   ]);
-
-  console.log('[getCompanyTrips] Aggregation result count:', trips.length);
 
   res.status(200).json({
     status: 'success',
