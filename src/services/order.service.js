@@ -167,12 +167,12 @@ const orderPopulate = [
 
 // Utility to include assignmentFailureReason in order responses if needed
 function orderToResponse(order) {
-  if (!order) return order;
-  if (typeof order.toObject === 'function') order = order.toObject();
-  return {
-    ...order,
-    assignmentFailureReason: order.assignmentFailureReason || null,
-  };
+	if (!order) return order;
+	if (typeof order.toObject === 'function') order = order.toObject();
+	return {
+		...order,
+		assignmentFailureReason: order.assignmentFailureReason || null,
+	};
 }
 
 const normalizeText = (value) => {
@@ -399,7 +399,7 @@ exports.createMarketplaceOrder = async (user, payload = {}) => {
 		}
 
 		targetCompany = await Company.findById(targetCompanyId);
-		if (!targetCompany || targetCompany.active === false || targetCompany.status !== 'ACTIVE') {
+		if (!targetCompany || targetCompany.active === false || targetCompany.status !== 'APPROVED') {
 			throw new AppError('No active transporter company found with that targetCompanyId', 404);
 		}
 	}
