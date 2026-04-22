@@ -5,7 +5,6 @@ const AppError = require("../utils/appError");
 const promisify = require("util").promisify;
 const crypto = require("crypto");
 const { send } = require("process");
-const sendEmail = require("../utils/email");
 const validator = require("validator");
 const path = require("path");
 const { uploadMulterFile } = require("../utils/cloudinaryUpload");
