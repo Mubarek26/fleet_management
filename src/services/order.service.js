@@ -273,12 +273,19 @@ const normalizeLocation = (location, fieldName, fallbackContact = {}) => {
 
 exports.getCreatorOrders = async (user, query = {}) => {
 	if (!user?._id) {
-		throw new AppError('You must be logged in to view your created orders', 401);
+		throw new AppError('You must be logged in to view orders', 401);
 	}
 
 	const filter = {
-		createdBy: user._id,
+		$or: [{ createdBy: user._id }],
 	};
+
+	if (user.role === 'COMPANY_ADMIN' && user.companyId) {
+		filter.$or.push({
+			targetCompanyId: user.companyId,
+			assignmentMode: 'DIRECT_COMPANY',
+		});
+	}
 
 	const status = normalizeText(query.status)?.toUpperCase();
 	if (status) {
@@ -507,6 +514,11 @@ exports.createMarketplaceOrder = async (user, payload = {}) => {
 	}
 
 	await order.populate(orderPopulate);
+	return order;
+};
 
+exports.getOrder = async (orderId) => {
+	const order = await Order.findById(orderId).populate(orderPopulate);
+	if (!order) throw new AppError('Order not found', 404);
 	return order;
 };

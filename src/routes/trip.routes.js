@@ -9,6 +9,7 @@ router.use(authController.protect);
 router.use(requireActiveStatus);
 
 router.get('/company', authController.restrictTo('COMPANY_ADMIN'), tripController.getCompanyTrips);
+router.get('/driver/mine', authController.restrictTo('DRIVER', 'PRIVATE_TRANSPORTER'), tripController.getDriverTrips);
 
 // PATCH /api/driver/trips/:id/milestone
 
