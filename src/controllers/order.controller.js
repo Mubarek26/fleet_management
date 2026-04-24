@@ -35,6 +35,15 @@ exports.rejectOrderByCompany = catchAsync(async (req, res) => {
 	});
 });
 
+exports.adminRejectOrderPost = catchAsync(async (req, res) => {
+	const order = await orderService.adminRejectOrderPost(req.user, req.params.orderId, req.body.reason);
+	res.status(200).json({
+		status: 'success',
+		message: 'Order post rejected by administrator',
+		data: { order },
+	});
+});
+
 
 exports.getMyCreatedOrders = catchAsync(async (req, res) => {
 	const orders = await orderService.getCreatorOrders(req.user, req.query);

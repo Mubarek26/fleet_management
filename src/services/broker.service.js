@@ -116,7 +116,7 @@ const buildValidationErrors = async (order) => {
 			errors.push('targetCompanyId is required when assignmentMode is DIRECT_COMPANY');
 		} else {
 			const company = await Company.findById(order.targetCompanyId).select('status active');
-			if (!company || company.active === false || company.status !== 'ACTIVE') {
+			if (!company || company.active === false || company.status !== 'APPROVED') {
 				errors.push('targetCompanyId must reference an active transporter company');
 			}
 		}
@@ -257,7 +257,7 @@ exports.matchOrder = async (user, orderId, query = {}) => {
 	if (includeCompanies) {
 		const companyFilter = {
 			active: true,
-			status: 'ACTIVE',
+			status: 'APPROVED',
 		};
 
 		if (order.assignmentMode === 'DIRECT_COMPANY' && order.targetCompanyId?._id) {
@@ -412,7 +412,7 @@ exports.assignOrder = async (user, payload = {}) => {
 
 	if (targetCompanyId) {
 		const company = await Company.findById(targetCompanyId).select('status active');
-		if (!company || company.active === false || company.status !== 'ACTIVE') {
+		if (!company || company.active === false || company.status !== 'APPROVED') {
 			throw new AppError('targetCompanyId must reference an active transporter company', 404);
 		}
 

@@ -34,7 +34,7 @@ exports.initiateContract = catchAsync(async (req, res, next) => {
 	}
 
 	const company = await Company.findById(transporterCompanyId);
-	if (!company || !company.active || company.status !== 'ACTIVE') {
+	if (!company || !company.active || company.status !== 'APPROVED') {
 		return next(new AppError('No active transporter company found with that ID', 404));
 	}
 
