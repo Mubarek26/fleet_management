@@ -71,3 +71,11 @@ exports.createMarketplaceOrder = catchAsync(async (req, res) => {
 		},
 	});
 });
+
+exports.getOrder = catchAsync(async (req, res) => {
+	const order = await orderService.getOrder(req.params.orderId);
+	res.status(200).json({
+		status: 'success',
+		data: { order },
+	});
+});

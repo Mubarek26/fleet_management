@@ -177,16 +177,40 @@ exports.getTripTracking = catchAsync(async (req, res, next) => {
 });
 
 
+const { sendSMS } = require('../services/afromessage.service');
+
 // PATCH /api/driver/trips/:id/milestone
 exports.updateMilestone = catchAsync(async (req, res, next) => {
-  const { milestone, location, note } = req.body;
+  const { milestone, location, note, otpCode } = req.body;
   const trip = await Trip.findById(req.params.id);
   if (!trip) return next(new AppError('Trip not found', 404));
   if (trip.active === false) return next(new AppError('Trip is inactive/deleted', 400));
+  
   // Optionally, validate allowed milestones
   const allowedMilestones = ['STARTED', 'ARRIVED', 'IN_TRANSIT', 'DELIVERED', 'COMPLETED'];
   if (!milestone || !allowedMilestones.includes(milestone)) {
     return next(new AppError('Invalid or missing milestone', 400));
+  }
+
+  // OTP Logic for COMPLETED status
+  if (milestone === 'COMPLETED') {
+    if (!trip.deliveryOtp || !trip.deliveryOtp.code) {
+        return next(new AppError('OTP was not generated. Please set status to DELIVERED first.', 400));
+    }
+    
+    if (!otpCode) {
+        return next(new AppError('OTP code is required to complete the trip', 400));
+    }
+
+    if (trip.deliveryOtp.code !== otpCode) {
+        return next(new AppError('Invalid OTP code', 400));
+    }
+
+    if (new Date() > trip.deliveryOtp.expiresAt) {
+        return next(new AppError('OTP code has expired. Please re-trigger DELIVERED status.', 400));
+    }
+
+    trip.deliveryOtp.verified = true;
   }
 
   trip.milestone = milestone;
@@ -198,6 +222,29 @@ exports.updateMilestone = catchAsync(async (req, res, next) => {
   if (note) trip.lastNote = note;
   trip.milestoneHistory = trip.milestoneHistory || [];
   trip.milestoneHistory.push({ milestone, location, note, at: new Date() });
+
+  // Generate OTP when reaching DELIVERED status
+  if (milestone === 'DELIVERED') {
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    trip.deliveryOtp = {
+        code: otp,
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
+        verified: false
+    };
+
+    const order = await Order.findById(trip.orderId);
+    if (order && order.deliveryLocation && order.deliveryLocation.contactPhone) {
+        try {
+            await sendSMS({
+                to: order.deliveryLocation.contactPhone,
+                message: `Your cargo delivery OTP is ${otp}. Please provide this to the driver to confirm completion of the trip for order ${order.orderNumber}.`
+            });
+        } catch (err) {
+            console.error('Failed to send OTP SMS:', err);
+        }
+    }
+  }
+
   await trip.save();
 
   // Optionally, update order status if linked
@@ -211,7 +258,22 @@ exports.updateMilestone = catchAsync(async (req, res, next) => {
 
   res.status(200).json({
     status: 'success',
-    message: 'Trip milestone updated',
+    message: `Trip milestone updated to ${milestone}`,
     data: { trip }
+  });
+});
+
+exports.getDriverTrips = catchAsync(async (req, res, next) => {
+  const driverId = req.user._id;
+
+  const trips = await Trip.find({ driverId })
+    .populate('orderId')
+    .populate('vehicleId')
+    .sort({ createdAt: -1 });
+
+  res.status(200).json({
+    status: 'success',
+    results: trips.length,
+    data: { trips }
   });
 });

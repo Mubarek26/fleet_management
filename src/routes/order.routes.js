@@ -6,6 +6,7 @@ const orderProposalController = require('../controllers/orderProposal.controller
 const router = express.Router();
 
 router.get('/mine', authController.protect, orderController.getMyCreatedOrders);
+router.get('/:orderId', authController.protect, orderController.getOrder);
 router.get('/proposals/mine', authController.protect, orderProposalController.listMyProposals);
 router.get('/marketplace', authController.protect, orderController.getOpenMarketplaceOrders);
 router.post('/marketplace', authController.protect, orderController.createMarketplaceOrder);
