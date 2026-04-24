@@ -63,3 +63,19 @@ exports.rejectProposal = catchAsync(async (req, res) => {
 		},
 	});
 });
+
+exports.withdrawProposal = catchAsync(async (req, res) => {
+	const proposal = await orderProposalService.withdrawProposal(
+		req.user,
+		req.params.orderId,
+		req.params.proposalId
+	);
+
+	res.status(200).json({
+		status: 'success',
+		message: 'Proposal withdrawn successfully',
+		data: {
+			proposal,
+		},
+	});
+});

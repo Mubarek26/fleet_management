@@ -1,5 +1,6 @@
 // Assign driver and vehicle to order with validation
 
+const mongoose = require('mongoose');
 const Order = require('../database/models/order.model');
 const Company = require('../database/models/company.model');
 const User = require('../database/models/user.model');
@@ -34,10 +35,6 @@ exports.assignOrder = async (orderId, driverId, vehicleId) => {
 	order.status = 'ASSIGNED';
 	order.assignmentFailureReason = null;
 	await order.save();
-
-	// Debug log for pickup and delivery location
-	// console.log('[assignOrder] pickupLocation:', order.pickupLocation);
-	// console.log('[assignOrder] deliveryLocation:', order.deliveryLocation);
 
 	// --- Geofence creation logic ---
 	const geofenceIds = [];
@@ -105,7 +102,7 @@ exports.assignOrder = async (orderId, driverId, vehicleId) => {
 
 
 const ALLOWED_CREATOR_ROLES = ['SHIPPER', 'VENDOR', 'BROKER', 'SUPER_ADMIN'];
-const ALLOWED_MARKETPLACE_VIEWER_ROLES = ['COMPANY_ADMIN', 'PRIVATE_TRANSPORTER', 'SUPER_ADMIN'];
+const ALLOWED_MARKETPLACE_VIEWER_ROLES = ['COMPANY_ADMIN', 'PRIVATE_TRANSPORTER', 'SUPER_ADMIN', 'DRIVER', 'VENDOR'];
 
 // --- COMPANY/SUPERADMIN ORDER ACCEPT/REJECT ---
 exports.acceptOrderByCompany = async (user, orderId) => {
@@ -224,7 +221,7 @@ const normalizeObjectId = (value, fieldName) => {
 	const normalized = normalizeText(value);
 	if (!normalized) return null;
 
-	if (!Order.db.base.Types.ObjectId.isValid(normalized)) {
+	if (!mongoose.Types.ObjectId.isValid(normalized)) {
 		throw new AppError(`${fieldName} must be a valid id`, 400);
 	}
 
@@ -310,52 +307,56 @@ exports.getCreatorOrders = async (user, query = {}) => {
 };
 
 exports.getOpenMarketplaceOrders = async (user, query = {}) => {
-	if (!user?._id) {
-		throw new AppError('You must be logged in to view marketplace orders', 401);
+	try {
+		if (!user?._id) {
+			throw new AppError('You must be logged in to view marketplace orders', 401);
+		}
+
+		if (!ALLOWED_MARKETPLACE_VIEWER_ROLES.includes(user.role)) {
+			throw new AppError(`Role ${user.role} is not authorized to view marketplace orders`, 403);
+		}
+
+		const filter = {
+			assignmentMode: 'OPEN_MARKETPLACE',
+			status: { $in: ['OPEN', 'REJECTED'] },
+			postStatus: { $in: ['ACTIVE', 'CANCELLED'] },
+		};
+
+		const pickupCity = normalizeText(query.pickupCity);
+		if (pickupCity) {
+			filter['pickupLocation.city'] = new RegExp(`^${pickupCity}$`, 'i');
+		}
+
+		const deliveryCity = normalizeText(query.deliveryCity);
+		if (deliveryCity) {
+			filter['deliveryLocation.city'] = new RegExp(`^${deliveryCity}$`, 'i');
+		}
+
+		const vehicleType = normalizeText(query.vehicleType);
+		if (vehicleType) {
+			filter['vehicleRequirements.vehicleType'] = new RegExp(`^${vehicleType}$`, 'i');
+		}
+
+		const search = normalizeText(query.search);
+		if (search) {
+			filter.$or = [
+				{ title: new RegExp(search, 'i') },
+				{ description: new RegExp(search, 'i') },
+				{ 'pickupLocation.address': new RegExp(search, 'i') },
+				{ 'deliveryLocation.address': new RegExp(search, 'i') },
+				{ 'cargo.type': new RegExp(search, 'i') },
+			];
+		}
+
+		const orders = await Order.find(filter)
+			.populate(orderPopulate)
+			.sort({ createdAt: -1 });
+
+		return orders;
+	} catch (error) {
+		console.error('[getOpenMarketplaceOrders Error]:', error);
+		throw error;
 	}
-
-	if (!ALLOWED_MARKETPLACE_VIEWER_ROLES.includes(user.role)) {
-		throw new AppError('Only transporter company admins and private transporters can view marketplace orders', 403);
-	}
-
-	const filter = {
-		assignmentMode: 'OPEN_MARKETPLACE',
-		channel: 'MARKETPLACE',
-		status: 'OPEN',
-		postStatus: 'ACTIVE',
-	};
-
-	const pickupCity = normalizeText(query.pickupCity);
-	if (pickupCity) {
-		filter['pickupLocation.city'] = new RegExp(`^${pickupCity}$`, 'i');
-	}
-
-	const deliveryCity = normalizeText(query.deliveryCity);
-	if (deliveryCity) {
-		filter['deliveryLocation.city'] = new RegExp(`^${deliveryCity}$`, 'i');
-	}
-
-	const vehicleType = normalizeText(query.vehicleType);
-	if (vehicleType) {
-		filter['vehicleRequirements.vehicleType'] = new RegExp(`^${vehicleType}$`, 'i');
-	}
-
-	const search = normalizeText(query.search);
-	if (search) {
-		filter.$or = [
-			{ title: new RegExp(search, 'i') },
-			{ description: new RegExp(search, 'i') },
-			{ 'pickupLocation.address': new RegExp(search, 'i') },
-			{ 'deliveryLocation.address': new RegExp(search, 'i') },
-			{ 'cargo.type': new RegExp(search, 'i') },
-		];
-	}
-
-	const orders = await Order.find(filter)
-		.populate(orderPopulate)
-		.sort({ createdAt: -1 });
-
-	return orders;
 };
 
 exports.createMarketplaceOrder = async (user, payload = {}) => {
@@ -515,6 +516,22 @@ exports.createMarketplaceOrder = async (user, payload = {}) => {
 
 	await order.populate(orderPopulate);
 	return order;
+};
+
+exports.adminRejectOrderPost = async (user, orderId, reason) => {
+	if (!user || user.role !== 'SUPER_ADMIN') {
+		throw new AppError('Only super admins can reject order posts', 403);
+	}
+
+	const order = await Order.findById(orderId);
+	if (!order) throw new AppError('Order not found', 404);
+
+	order.postStatus = 'CANCELLED';
+	order.status = 'REJECTED';
+	order.adminRejectionReason = reason || 'Rejected by administrator';
+	await order.save();
+
+	return order.populate(orderPopulate);
 };
 
 exports.getOrder = async (orderId) => {

@@ -35,7 +35,8 @@ class APIFeatures {
                 this.query = this.query.select(fields); // Select specific fields
             }
             else {
-                this.query = this.query.select('-__v'); // Exclude the __v field by default
+                // Remove default exclusion of __v if it causes projection conflicts with inclusions like +active
+                // this.query = this.query.select('-__v'); 
             }  
             return this;
         

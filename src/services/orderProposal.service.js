@@ -103,8 +103,13 @@ const ensureOrderAcceptingProposals = (order) => {
 		throw new AppError('This order post is no longer accepting proposals', 400);
 	}
 
-	if (order.status !== 'OPEN') {
-		throw new AppError('This order is no longer open for proposals', 400);
+	const CLOSED_STATUSES = ['ACCEPTED', 'REJECTED', 'ASSIGNED', 'IN_TRANSIT', 'DELIVERED', 'COMPLETED', 'CANCELLED'];
+	if (CLOSED_STATUSES.includes(order.status)) {
+		throw new AppError(`This order is already ${order.status.toLowerCase()} and no longer open for proposals`, 400);
+	}
+
+	if (order.status !== 'OPEN' && order.status !== 'PENDING') {
+		throw new AppError('This order is not currently open for proposals', 400);
 	}
 };
 
@@ -113,7 +118,7 @@ const getActiveManagedCompany = async (user) => {
 
 	if (companyId) {
 		const company = await Company.findById(companyId);
-		if (!company || company.active === false || company.status !== 'ACTIVE') {
+		if (!company || company.active === false || company.status !== 'APPROVED') {
 			throw new AppError('No active transporter company is linked to this account', 403);
 		}
 
@@ -121,7 +126,7 @@ const getActiveManagedCompany = async (user) => {
 	}
 
 	const ownedCompany = await Company.findOne({ ownerId: user._id });
-	if (!ownedCompany || ownedCompany.active === false || ownedCompany.status !== 'ACTIVE') {
+	if (!ownedCompany || ownedCompany.active === false || ownedCompany.status !== 'APPROVED') {
 		throw new AppError('No active transporter company is linked to this account', 403);
 	}
 
@@ -340,7 +345,7 @@ exports.acceptProposal = async (user, orderId, proposalId) => {
 		}
 	);
 
-	order.status = 'ASSIGNED';
+	order.status = 'ACCEPTED';
 	order.assignmentMode = proposal.proposalType === 'COMPANY' ? 'DIRECT_COMPANY' : 'DIRECT_PRIVATE_TRANSPORTER';
 	order.targetCompanyId = proposal.proposalType === 'COMPANY' ? proposal.companyId : null;
 	order.targetTransporterId =
@@ -354,6 +359,26 @@ exports.acceptProposal = async (user, orderId, proposalId) => {
 		order: populatedOrder,
 		proposal: populatedProposal,
 	};
+};
+
+exports.withdrawProposal = async (user, orderId, proposalId) => {
+	ensureAuthenticated(user, 'You must be logged in to withdraw a proposal');
+
+	const proposal = await loadProposal(orderId, proposalId);
+
+	// Ensure only the person who submitted the proposal can withdraw it
+	if (String(proposal.submittedByUserId) !== String(user._id)) {
+		throw new AppError('You can only withdraw your own proposals', 403);
+	}
+
+	if (proposal.status !== 'PENDING') {
+		throw new AppError(`Cannot withdraw a proposal that is already ${proposal.status.toLowerCase()}`, 400);
+	}
+
+	proposal.status = 'WITHDRAWN';
+	await proposal.save();
+
+	return proposal;
 };
 
 exports.rejectProposal = async (user, orderId, proposalId, payload = {}) => {
