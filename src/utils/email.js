@@ -1,44 +1,35 @@
+const { Resend } = require("resend");
 
-const nodemailer = require('nodemailer');
-
-
-
-
+/**
+ * Sends an email using the Resend service.
+ * @param {Object} options - The email options.
+ * @param {string} options.email - The recipient's email address.
+ * @param {string} options.subject - The subject of the email.
+ * @param {string} options.message - The body text of the email.
+ */
 const sendEmail = async (options) => {
-    const port = Number(process.env.EMAIL_PORT || 587);
-    const secure = port === 465;
+    const resend = new Resend(process.env.RESEND_API_KEY);
 
-    const transporter = nodemailer.createTransport({
-        host: process.env.EMAIL_HOST,
-        port,
-        secure,
-        auth: {
-            user: process.env.EMAIL_USERNAME,
-            pass: process.env.EMAIL_PASSWORD,
-        },
-    });
-
-    const fromAddress =
-        process.env.EMAIL_FROM ||
-        `Unity Freight Services <${process.env.EMAIL_USERNAME}>`;
-
-    const mailOptions = {
-        from: fromAddress,
-        to: options.email,
-        subject: options.subject,
-        text: options.message,
-    };
+    const fromAddress = process.env.EMAIL_FROM || "onboarding@resend.dev";
 
     try {
-        await transporter.sendMail(mailOptions);
-    } catch (err) {
-        console.error('Email sending error:', {
-            message: err.message,
-            code: err.code,
-            response: err.response,
-            responseCode: err.responseCode,
-            command: err.command,
+        const { data, error } = await resend.emails.send({
+            from: fromAddress,
+            to: options.email,
+            subject: options.subject,
+            text: options.message,
+            html: options.html,
         });
+
+        if (error) {
+            console.error("Resend Email sending error:", error);
+            throw new Error(error.message);
+        }
+
+        console.log("Email sent successfully via Resend:", data);
+        return data;
+    } catch (err) {
+        console.error("Resend service error:", err);
         throw err;
     }
 };

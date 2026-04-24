@@ -67,8 +67,8 @@
  * @swagger
  * /api/v1/orders/marketplace:
  *   get:
- *     summary: Get open marketplace orders
- *     description: Returns active `OPEN_MARKETPLACE` orders that transporter company admins and private transporters can browse and apply to.
+ *     summary: Get marketplace orders
+ *     description: Returns active `OPEN_MARKETPLACE` orders that transporter company admins and private transporters can browse. Includes `OPEN` and `REJECTED` orders for transparency.
  *     tags: [Orders]
  *     security:
  *       - bearerAuth: []
@@ -190,6 +190,89 @@
  *         description: Unauthorized
  *       403:
  *         description: User role is not allowed to create marketplace orders
+  *       401:
+ *         description: Unauthorized
+ */
+
+/**
+ * @swagger
+ * /api/v1/orders/{orderId}:
+ *   get:
+ *     summary: Get order details
+ *     description: Retrieve detailed information about a specific marketplace order.
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: orderId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Order details fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status: { type: string, example: success }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     order: { $ref: '#/components/schemas/MarketplaceOrder' }
+ *       404:
+ *         description: Order not found
+ */
+
+/**
+ * @swagger
+ * /api/v1/orders/{orderId}/accept:
+ *   patch:
+ *     summary: Company or Super Admin accept an order
+ *     description: Allows a transporter company admin or super admin to accept an order that was sent directly to them.
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: orderId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Order accepted successfully
+ *       403:
+ *         description: Not authorized to accept this order
+ */
+
+/**
+ * @swagger
+ * /api/v1/orders/{orderId}/reject:
+ *   patch:
+ *     summary: Company or Super Admin reject an order
+ *     description: Allows a transporter company admin or super admin to reject an order that was sent directly to them.
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: orderId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               reason: { type: string, example: Price is too low. }
+ *     responses:
+ *       200:
+ *         description: Order rejected successfully
  */
 
 /**
@@ -473,4 +556,74 @@
  *         description: Only the order creator can reject proposals
  *       404:
  *         description: Order or proposal not found
+ */
+
+/**
+ * @swagger
+ * /api/v1/orders/{orderId}/admin-reject:
+ *   patch:
+ *     summary: Super Admin reject an order post
+ *     description: Allows a Super Admin to reject an order post from the marketplace and provide a reason. The order remains visible but marked as NOT AVAILABLE.
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: orderId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [reason]
+ *             properties:
+ *               reason:
+ *                 type: string
+ *                 example: Incomplete documentation or suspicious load.
+ *     responses:
+ *       200:
+ *         description: Order post rejected successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Only Super Admins can reject order posts
+ *       404:
+ *         description: Order not found
+ */
+
+/**
+ * @swagger
+ * /api/v1/orders/{orderId}/proposals/{proposalId}/withdraw:
+ *   patch:
+ *     summary: Withdraw a submitted proposal
+ *     description: Allows a transporter to withdraw their own pending proposal.
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: orderId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: proposalId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Proposal withdrawn successfully
+ *       400:
+ *         description: Cannot withdraw a non-pending proposal
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: You can only withdraw your own proposals
+ *       404:
+ *         description: Proposal not found
  */

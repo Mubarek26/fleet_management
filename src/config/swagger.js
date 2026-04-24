@@ -308,7 +308,7 @@ const options = {
             channel: { type: 'string', enum: ['MARKETPLACE'], example: 'MARKETPLACE' },
             status: {
               type: 'string',
-              enum: ['OPEN', 'MATCHED', 'ASSIGNED', 'IN_TRANSIT', 'DELIVERED', 'CANCELLED'],
+              enum: ['OPEN', 'MATCHED', 'ASSIGNED', 'IN_TRANSIT', 'DELIVERED', 'CANCELLED', 'REJECTED'],
               example: 'OPEN'
             },
             title: { type: 'string', example: 'Addis to Adama FMCG delivery' },
@@ -321,6 +321,7 @@ const options = {
             deliveryDeadline: { type: 'string', format: 'date-time', nullable: true },
             pricing: { $ref: '#/components/schemas/MarketplacePricing' },
             specialInstructions: { type: 'string', example: 'Driver should call before arrival.' },
+            adminRejectionReason: { type: 'string', nullable: true, example: 'Incomplete documentation' },
             createdAt: { type: 'string', format: 'date-time' },
             updatedAt: { type: 'string', format: 'date-time' }
           }

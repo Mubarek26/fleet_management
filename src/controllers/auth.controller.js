@@ -8,14 +8,16 @@ const { send } = require("process");
 const validator = require("validator");
 const path = require("path");
 const { uploadMulterFile } = require("../utils/cloudinaryUpload");
-const singToken = async (id) => {
+const sendEmail = require("../utils/email");
+
+const signToken = async (id) => {
   return jwt.sign({ id: id }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN,
   });
 };
 
 const createSendToken = async (user, statusCode, res) => {
-  const token = await singToken(user._id);
+  const token = await signToken(user._id);
   // remove password from output
   user.password = undefined;
   const cookieOptions = {
@@ -188,15 +190,55 @@ exports.forgotPassword = catchAsync(async (req, res, next) => {
   const resetToken = user.createPasswordResetToken();
   await user.save({ validateBeforeSave: false });
   //send it to user's email
- const resetURL = `${process.env.FRONTEND_URL}/resetPassword/${resetToken}`;
-  const message =
-    `Forgot your password? Please use the link below to set a new password and confirm it` +
-    `Confirm to: ${resetURL}.\nIf you didn't forget your password, please ignore this email!`;
+  const resetURL = `${process.env.FRONTEND_URL}/resetPassword/${resetToken}`;
+  
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        .container { font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; }
+        .header { background-color: #0f172a; padding: 40px 20px; text-align: center; border-radius: 16px 16px 0 0; }
+        .content { padding: 40px 30px; line-height: 1.6; color: #334155; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 16px 16px; }
+        .button { background-color: #2563eb; color: #ffffff !important; padding: 16px 32px; text-decoration: none; border-radius: 12px; font-weight: bold; display: inline-block; margin: 30px 0; box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.2); }
+        .footer { text-align: center; padding: 20px; color: #94a3b8; font-size: 12px; }
+        .logo { color: #ffffff; font-size: 24px; font-weight: 900; letter-spacing: -1px; }
+        .logo span { color: #3b82f6; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <div class="logo">Cargo<span>Dash</span></div>
+        </div>
+        <div class="content">
+          <h2 style="color: #0f172a; margin-top: 0;">Password Reset Request</h2>
+          <p>Hello,</p>
+          <p>We received a request to reset the password for your CargoDash account. Click the button below to set a new password. This link is valid for <strong>10 minutes</strong>.</p>
+          <div style="text-align: center;">
+            <a href="${resetURL}" class="button">Reset My Password</a>
+          </div>
+          <p style="font-size: 14px; color: #64748b;">If you didn't request this, you can safely ignore this email. Your password will remain unchanged.</p>
+          <hr style="border: none; border-top: 1px solid #f1f5f9; margin: 30px 0;" />
+          <p style="font-size: 12px; color: #94a3b8;">If you're having trouble clicking the button, copy and paste the link below into your browser:</p>
+          <p style="font-size: 12px; color: #3b82f6; word-break: break-all;">${resetURL}</p>
+        </div>
+        <div class="footer">
+          &copy; ${new Date().getFullYear()} CargoDash Logistics. All rights reserved.
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const message = `Forgot your password? Reset it here: ${resetURL}. Valid for 10 minutes.`;
+
   try {
     await sendEmail({
       email: user.email,
-      subject: "Your password reset token (valid for 10 minutes)",
+      subject: "🔒 Password Reset Instructions - CargoDash",
       message,
+      html,
     });
     return res.status(200).json({
       status: "success",
@@ -237,12 +279,7 @@ exports.resetPassword = catchAsync(async (req, res, next) => {
   user.resetPasswordExpires = undefined;
   await user.save();
   // 4. log the user in, send JWT
-  const token = await singToken(user._id);
-  // 5. Send response
-  res.status(200).json({
-    status: "success",
-    token,
-  });
+  return createSendToken(user, 200, res);
 });
 
 exports.updatePassword = catchAsync(async (req, res, next) => {
@@ -259,9 +296,5 @@ exports.updatePassword = catchAsync(async (req, res, next) => {
 
   await user.save();
   // 4. Log user in, send JWT
-  const token = await singToken(user._id);
-  res.status(200).json({
-    status: "success",
-    token,
-  });
+  return createSendToken(user, 200, res);
 });
