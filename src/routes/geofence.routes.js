@@ -1,23 +1,34 @@
-// Get all geofences for a trip by tripId
 const express = require('express');
 const geofenceController = require('../controllers/geofence.controller');
+const authController = require('../controllers/auth.controller');
 
 const router = express.Router();
-router.get('/by-trip/:tripId', geofenceController.getGeofencesByTrip);
-// Create a new geofence
-router.post('/', geofenceController.createGeofence);
 
-// Get all geofences
+router.use(authController.protect);
+
+router.get('/by-trip/:tripId', geofenceController.getGeofencesByTrip);
+
+router.post(
+  '/', 
+  authController.restrictTo('SUPER_ADMIN', 'COMPANY_ADMIN'),
+  geofenceController.createGeofence
+);
+
 router.get('/', geofenceController.getAllGeofences);
 
-// Get a single geofence by ID
 router.get('/:id', geofenceController.getGeofence);
 
-// Update a geofence
-router.put('/:id', geofenceController.updateGeofence);
+router.put(
+  '/:id', 
+  authController.restrictTo('SUPER_ADMIN', 'COMPANY_ADMIN'),
+  geofenceController.updateGeofence
+);
 
-// Delete a geofence
-router.delete('/:id', geofenceController.deleteGeofence);
+router.delete(
+  '/:id', 
+  authController.restrictTo('SUPER_ADMIN', 'COMPANY_ADMIN'),
+  geofenceController.deleteGeofence
+);
 
 // Check driver location for a trip against geofences
 router.post('/check-location', geofenceController.checkDriverLocation);

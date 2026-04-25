@@ -58,7 +58,8 @@ exports.getTripById = catchAsync(async (req, res, next) => {
   const trip = await Trip.findById(req.params.id)
     .populate('driverId')
     .populate('orderId')
-    .populate('vehicleId');
+    .populate('vehicleId')
+    .populate('geofences');
   if (!trip) return next(new AppError('Trip not found', 404));
   res.status(200).json({ status: 'success', data: { trip } });
 });
@@ -69,7 +70,8 @@ exports.getAllTrips = catchAsync(async (req, res, next) => {
   const trips = await Trip.find()
     .populate('driverId')
     .populate('orderId')
-    .populate('vehicleId');
+    .populate('vehicleId')
+    .populate('geofences');
   res.status(200).json({ status: 'success', results: trips.length, data: { trips } });
 });
 
@@ -269,6 +271,7 @@ exports.getDriverTrips = catchAsync(async (req, res, next) => {
   const trips = await Trip.find({ driverId })
     .populate('orderId')
     .populate('vehicleId')
+    .populate('geofences')
     .sort({ createdAt: -1 });
 
   res.status(200).json({
