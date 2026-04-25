@@ -167,7 +167,7 @@ exports.protect = catchAsync(async (req, res, next) => {
 
 exports.restrictTo = (...roles) => {
   return (req, res, next) => {
-    if (req.user && req.user.role === 'superadmin') {
+    if (req.user && req.user.role === 'SUPER_ADMIN') {
       return next();
     }
     if (!roles.includes(req.user.role)) {

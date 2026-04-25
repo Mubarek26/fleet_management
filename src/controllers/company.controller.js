@@ -79,13 +79,17 @@ exports.approveCompany = catchAsync(async (req, res, next) => {
     // Send email notification to the company owner 
     const owner = await User.findById(company.ownerId);
     if (owner) {
+        owner.status = 'ACTIVE';
+        await owner.save();
+        
         try {
             await sendEmail({
                 email: owner.email,
                 subject: 'Your company has been approved',
                 message: `Congratulations! Your company "${company.name}" has been approved and is now active on our platform. You can start adding drivers and vehicles to your company profile.`
             });
-        } catch (err) {            console.error('Failed to send approval email:', err);
+        } catch (err) {
+            console.error('Failed to send approval email:', err);
         }
     }
 
