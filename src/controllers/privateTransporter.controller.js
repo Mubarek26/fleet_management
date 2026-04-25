@@ -138,18 +138,24 @@ exports.updateApplicationStatus = async (req, res) => {
     if (!application) {
       return res.status(404).json({ message: 'Application not found.' });
     }
-    // Send SMS if approved
-    if (status === 'approved' && application.contactNumber) {
-      try {
-        await sendSMS({
-          to: application.contactNumber,
-          message: `Your application has been approved. Welcome to the platform!`
-          
-        });
-      } catch (smsErr) {
-        console.error('Failed to send approval SMS:', smsErr.message);
+
+    // Automatically set User status to ACTIVE if application is approved
+    if (status === 'approved') {
+      const User = require('../database/models/user.model');
+      await User.findByIdAndUpdate(application.userId, { status: 'ACTIVE' });
+      
+      if (application.contactNumber) {
+        try {
+          await sendSMS({
+            to: application.contactNumber,
+            message: `Your application has been approved. Welcome to the platform!`
+          });
+        } catch (smsErr) {
+          console.error('Failed to send approval SMS:', smsErr.message);
+        }
       }
     }
+
     res.status(200).json({ message: 'Status updated.', application });
   } catch (error) {
     res.status(500).json({ message: 'Failed to update status', error: error.message });

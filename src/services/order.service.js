@@ -101,8 +101,8 @@ exports.assignOrder = async (orderId, driverId, vehicleId) => {
 };
 
 
-const ALLOWED_CREATOR_ROLES = ['SHIPPER', 'VENDOR', 'BROKER', 'SUPER_ADMIN'];
-const ALLOWED_MARKETPLACE_VIEWER_ROLES = ['COMPANY_ADMIN', 'PRIVATE_TRANSPORTER', 'SUPER_ADMIN', 'DRIVER', 'VENDOR'];
+const ALLOWED_CREATOR_ROLES = ['SHIPPER', 'VENDOR', 'BROKER', 'SUPER_ADMIN', 'COMPANY_ADMIN'];
+const ALLOWED_MARKETPLACE_VIEWER_ROLES = ['COMPANY_ADMIN', 'PRIVATE_TRANSPORTER', 'SUPER_ADMIN', 'DRIVER', 'VENDOR', 'SHIPPER'];
 
 // --- COMPANY/SUPERADMIN ORDER ACCEPT/REJECT ---
 exports.acceptOrderByCompany = async (user, orderId) => {
@@ -364,7 +364,7 @@ exports.createMarketplaceOrder = async (user, payload = {}) => {
 		throw new AppError('You must be logged in to create a marketplace order', 401);
 	}
 
-	if (!ALLOWED_CREATOR_ROLES.includes(user.role)) {
+	if (!ALLOWED_CREATOR_ROLES.includes(user.role?.toUpperCase())) {
 		throw new AppError('Your account is not allowed to create marketplace orders', 403);
 	}
 

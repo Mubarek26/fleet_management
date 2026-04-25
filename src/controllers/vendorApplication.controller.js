@@ -126,6 +126,12 @@ exports.updateApplicationStatus = async (req, res) => {
       return res.status(404).json({ message: 'Application not found.' });
     }
 
+    // Automatically set User status to ACTIVE if application is approved
+    if (status === 'approved') {
+      const User = require('../database/models/user.model');
+      await User.findByIdAndUpdate(application.userId, { status: 'ACTIVE' });
+    }
+
     res.status(200).json({ message: 'Status updated.', application });
   } catch (error) {
     res.status(500).json({ message: 'Failed to update status', error: error.message });
