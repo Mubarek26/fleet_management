@@ -44,6 +44,17 @@ const vehicleSchema = new mongoose.Schema(
 			ref: "Driver",
 			default: null,
 		},
+		fuel: {
+			type: Number,
+			default: 100,
+			min: 0,
+			max: 100,
+		},
+		mileage: {
+			type: Number,
+			default: 0,
+			min: 0,
+		},
 	},
 	{ timestamps: true }
 );

@@ -1,5 +1,6 @@
 const Trip = require('../database/models/trip.model');
 const AppError = require('../utils/appError');
+const geofenceService = require('./geofence.service');
 
 /**
  * Update or create the latest location for a trip.
@@ -20,22 +21,34 @@ exports.updateDriverLocation = async ({ tripId, driverId, location }) => {
   if (isNaN(lng) || isNaN(lat)) {
     throw new AppError('Coordinates must be numbers.', 400);
   }
-  const trip = await Trip.findById(tripId);
+  const trip = await Trip.findById(tripId).populate('geofences');
   if (!trip) throw new AppError('Trip not found', 404);
   if (String(trip.driverId) !== String(driverId)) {
     throw new AppError('Trip does not belong to this driver', 403);
   }
+
+  // Geofence Check
+  const geofenceStatus = geofenceService.checkLocationAgainstGeofences([lng, lat], trip.geofences);
+  
   // Update current location and append to history
   trip.location = { type: 'Point', coordinates: [lng, lat], speed: location.speed, heading: location.heading };
   trip.locationHistory = trip.locationHistory || [];
   trip.locationHistory.push({ type: 'Point', coordinates: [lng, lat], speed: location.speed, heading: location.heading, at: new Date() });
-  // Also update lastLocation for backward compatibility
+  
+  // Also update lastLocation and status
   trip.lastLocation = {
     lat,
     lng,
     speed: location.speed,
     heading: location.heading
   };
+  trip.lastNote = `Geofence Status: ${geofenceStatus}`;
+  
   await trip.save();
-  return trip;
+  
+  // Return trip with geofenceStatus added for the controller to use
+  const tripObj = trip.toObject();
+  tripObj.geofenceStatus = geofenceStatus;
+  
+  return tripObj;
 };

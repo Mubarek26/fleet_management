@@ -37,12 +37,17 @@ exports.streamLocation = catchAsync(async (req, res, next) => {
 			speed,
 			heading
 		},
+		geofenceStatus: trip.geofenceStatus,
 		timestamp: Date.now()
 	});
 	res.status(200).json({
 		status: 'success',
 		message: 'Location updated',
-		data: { tripId, location: { type: 'Point', coordinates: [lng, lat], speed, heading } }
+		data: { 
+			tripId, 
+			location: { type: 'Point', coordinates: [lng, lat], speed, heading },
+			geofenceStatus: trip.geofenceStatus
+		}
 	});
 });
 
