@@ -66,12 +66,79 @@ exports.getTripById = catchAsync(async (req, res, next) => {
 
 // GET /api/trips
 exports.getAllTrips = catchAsync(async (req, res, next) => {
-  // Add filters as needed (e.g., by user, driver, status)
-  const trips = await Trip.find()
+  let filter = { active: true };
+
+  const role = req.user.role;
+  const userId = req.user._id;
+  let companyId = req.user.companyId;
+
+  // Resolve companyId for Company Admins if not directly on user object
+  if (role === 'COMPANY_ADMIN' && !companyId) {
+    const Company = require('../database/models/company.model');
+    const company = await Company.findOne({ ownerId: userId });
+    if (company) companyId = company._id;
+  }
+
+  if (role === 'COMPANY_ADMIN' || role === 'VENDOR') {
+    // For companies/vendors, find trips where the associated order was targeted to them
+    // or they created the order
+    const Order = require('../database/models/order.model');
+    const myOrders = await Order.find({
+      $or: [
+        { targetCompanyId: companyId },
+        { targetTransporterId: userId },
+        { createdBy: userId }
+      ]
+    }).select('_id');
+
+    const orderIds = myOrders.map(o => o._id);
+    filter.orderId = { $in: orderIds };
+  } else if (role === 'DRIVER') {
+    filter.driverId = userId;
+  } else if (role === 'SHIPPER') {
+    const Order = require('../database/models/order.model');
+    const myOrders = await Order.find({ createdBy: userId }).select('_id');
+    const orderIds = myOrders.map(o => o._id);
+    filter.orderId = { $in: orderIds };
+  } else if (role === 'SUPER_ADMIN') {
+    // Super admin sees everything (no additional filter)
+    delete filter.active; // Optional: maybe super admin sees inactive too
+    filter.active = { $ne: false };
+  }
+
+  // Handle delayed filter
+  if (req.query.delayed === 'true') {
+    const Order = require('../database/models/order.model');
+    const delayedOrders = await Order.find({
+      deliveryDeadline: { $lt: new Date() },
+      status: { $nin: ['DELIVERED', 'COMPLETED', 'CANCELLED'] }
+    }).select('_id');
+
+    const delayedOrderIds = delayedOrders.map(o => o._id);
+
+    // Combine with existing orderId filter if present
+    if (filter.orderId) {
+      if (filter.orderId.$in) {
+        filter.orderId.$in = filter.orderId.$in.filter(id =>
+          delayedOrderIds.some(dId => dId.toString() === id.toString())
+        );
+      } else {
+        filter.orderId = { $in: delayedOrderIds };
+      }
+    } else {
+      filter.orderId = { $in: delayedOrderIds };
+    }
+  } else if (req.query.milestone) {
+    filter.milestone = req.query.milestone.toUpperCase();
+  }
+
+  const trips = await Trip.find(filter)
     .populate('driverId')
     .populate('orderId')
     .populate('vehicleId')
-    .populate('geofences');
+    .populate('geofences')
+    .sort({ createdAt: -1 });
+
   res.status(200).json({ status: 'success', results: trips.length, data: { trips } });
 });
 
@@ -187,7 +254,7 @@ exports.updateMilestone = catchAsync(async (req, res, next) => {
   const trip = await Trip.findById(req.params.id);
   if (!trip) return next(new AppError('Trip not found', 404));
   if (trip.active === false) return next(new AppError('Trip is inactive/deleted', 400));
-  
+
   // Optionally, validate allowed milestones
   const allowedMilestones = ['STARTED', 'ARRIVED', 'IN_TRANSIT', 'DELIVERED', 'COMPLETED'];
   if (!milestone || !allowedMilestones.includes(milestone)) {
@@ -197,19 +264,19 @@ exports.updateMilestone = catchAsync(async (req, res, next) => {
   // OTP Logic for COMPLETED status
   if (milestone === 'COMPLETED') {
     if (!trip.deliveryOtp || !trip.deliveryOtp.code) {
-        return next(new AppError('OTP was not generated. Please set status to DELIVERED first.', 400));
+      return next(new AppError('OTP was not generated. Please set status to DELIVERED first.', 400));
     }
-    
+
     if (!otpCode) {
-        return next(new AppError('OTP code is required to complete the trip', 400));
+      return next(new AppError('OTP code is required to complete the trip', 400));
     }
 
     if (trip.deliveryOtp.code !== otpCode) {
-        return next(new AppError('Invalid OTP code', 400));
+      return next(new AppError('Invalid OTP code', 400));
     }
 
     if (new Date() > trip.deliveryOtp.expiresAt) {
-        return next(new AppError('OTP code has expired. Please re-trigger DELIVERED status.', 400));
+      return next(new AppError('OTP code has expired. Please re-trigger DELIVERED status.', 400));
     }
 
     trip.deliveryOtp.verified = true;
@@ -229,21 +296,21 @@ exports.updateMilestone = catchAsync(async (req, res, next) => {
   if (milestone === 'DELIVERED') {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     trip.deliveryOtp = {
-        code: otp,
-        expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
-        verified: false
+      code: otp,
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
+      verified: false
     };
 
     const order = await Order.findById(trip.orderId);
     if (order && order.deliveryLocation && order.deliveryLocation.contactPhone) {
-        try {
-            await sendSMS({
-                to: order.deliveryLocation.contactPhone,
-                message: `Your cargo delivery OTP is ${otp}. Please provide this to the driver to confirm completion of the trip for order ${order.orderNumber}.`
-            });
-        } catch (err) {
-            console.error('Failed to send OTP SMS:', err);
-        }
+      try {
+        await sendSMS({
+          to: order.deliveryLocation.contactPhone,
+          message: `Your cargo delivery OTP is ${otp}. Please provide this to the driver to confirm completion of the trip for order ${order.orderNumber}.`
+        });
+      } catch (err) {
+        console.error('Failed to send OTP SMS:', err);
+      }
     }
   }
 

@@ -21,7 +21,7 @@ exports.getFleetStatus = catchAsync(async (req, res, next) => {
     }
 
     const query = req.user.role === 'SUPER_ADMIN' ? {} : { companyId };
-    
+
     const vehicles = await Vehicle.find(query).populate('currentDriverId');
 
     const fleetData = await Promise.all(vehicles.map(async (vehicle) => {
@@ -102,7 +102,7 @@ exports.getDashboardStats = catchAsync(async (req, res, next) => {
 
     // 3. Fetch Stats
     const totalOrders = await Order.countDocuments(filter);
-    
+
     const activeShipments = await Order.countDocuments({
         ...filter,
         status: { $in: ['IN_TRANSIT', 'ASSIGNED', 'MATCHED'] }
@@ -111,9 +111,9 @@ exports.getDashboardStats = catchAsync(async (req, res, next) => {
     const deliveredToday = await Order.countDocuments({
         ...filter,
         status: 'DELIVERED',
-        updatedAt: { 
-            $gte: new Date(new Date().setHours(0,0,0,0)),
-            $lte: new Date(new Date().setHours(23,59,59,999))
+        updatedAt: {
+            $gte: new Date(new Date().setHours(0, 0, 0, 0)),
+            $lte: new Date(new Date().setHours(23, 59, 59, 999))
         }
     });
 
