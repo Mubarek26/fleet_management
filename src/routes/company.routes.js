@@ -38,6 +38,19 @@ router
   .get(authController.restrictTo('SUPER_ADMIN'), companyController.getAllVehicles);
 
 router
+  .route('/vehicles/:id')
+  .patch(companyController.updateCompanyVehicle)
+  .delete(companyController.deleteCompanyVehicle);
+
+router
+  .route('/drivers/:id')
+  .patch(upload.fields([
+    { name: 'driverPhoto', maxCount: 1 },
+    { name: 'licensePhoto', maxCount: 1 }
+  ]), companyController.updateCompanyDriver)
+  .delete(companyController.deleteCompanyDriver);
+
+router
   .route('/drivers/all')
   .get(authController.restrictTo('SUPER_ADMIN'), companyController.getAllDrivers);
 

@@ -42,13 +42,14 @@ exports.approveUser = catchAsync(async (req, res, next) => {
     } catch (err) {
         console.error('Failed to send approval email:', err);
     }
-     // send approval sms
+    // send approval sms
     try {
         await sendSMS({
             to: user.phoneNumber,
             message: `Congratulations! Your account has been approved and is now active on our platform.`
         });
-    } catch (err) {        console.error('Failed to send approval SMS:', err);
+    } catch (err) {
+        console.error('Failed to send approval SMS:', err);
     }
     res.status(200).json({
         status: 'success',
@@ -56,7 +57,7 @@ exports.approveUser = catchAsync(async (req, res, next) => {
         data: { user }
     });
 
-   
+
 
 });
 
@@ -81,7 +82,7 @@ exports.approveCompany = catchAsync(async (req, res, next) => {
     if (owner) {
         owner.status = 'ACTIVE';
         await owner.save();
-        
+
         try {
             await sendEmail({
                 email: owner.email,
@@ -145,7 +146,7 @@ exports.createCompany = catchAsync(async (req, res, next) => {
 
 // get a company
 exports.getCompany = catchAsync(async (req, res, next) => {
-    const company = await Company.findById(req.params.id);
+    const company = await Company.findById(req.params.id).populate('ownerId');
 
     if (!company) {
         return next(new appError('No company found with that ID', 404));
@@ -162,7 +163,7 @@ exports.getCompany = catchAsync(async (req, res, next) => {
 
 // get the authenticated company admin's company
 exports.getMyCompany = catchAsync(async (req, res, next) => {
-    
+
     let company = null;
 
     if (req.user.companyId) {
@@ -187,7 +188,7 @@ exports.getMyCompany = catchAsync(async (req, res, next) => {
 
 // get all companies
 exports.getAllCompanies = catchAsync(async (req, res, next) => {
-    const features = new APIFeatures(Company.find(), req.query)
+    const features = new APIFeatures(Company.find().populate('ownerId'), req.query)
         .filter()
         .sort()
         .limitFields()
@@ -295,7 +296,7 @@ exports.deleteCompany = catchAsync(async (req, res, next) => {
     }
     // Optionally, you could set the company to inactive instead of deleting it
     company.active = false;
-     await company.save();
+    await company.save();
     res.status(204).json({
         status: 'success',
         data: null
@@ -383,7 +384,7 @@ exports.addDriverToCompany = catchAsync(async (req, res, next) => {
     });
 
 
-}) 
+})
 
 // get company drivers
 exports.getCompanyDrivers = catchAsync(async (req, res, next) => {
@@ -437,11 +438,43 @@ exports.updateCompanyDriver = catchAsync(async (req, res, next) => {
 
     await driver.save();
 
+    // Sync status to the user account if modified
+    if (status && driver.userId && (status === 'ACTIVE' || status === 'SUSPENDED')) {
+        await User.findByIdAndUpdate(driver.userId, { status });
+    }
+
     res.status(200).json({
         status: 'success',
         data: {
             driver
         }
+    });
+});
+
+exports.deleteCompanyDriver = catchAsync(async (req, res, next) => {
+    const driver = await Driver.findById(req.params.id);
+    if (!driver) {
+        return next(new appError('No driver found with that ID', 404));
+    }
+
+    // Check ownership if not SUPER_ADMIN
+    if (req.user.role === 'COMPANY_ADMIN') {
+        const company = await Company.findOne({ ownerId: req.user._id });
+        if (!company || String(driver.companyId) !== String(company._id)) {
+            return next(new appError('You do not have permission to delete this driver', 403));
+        }
+    }
+
+    // Delete associated user
+    if (driver.userId) {
+        await User.findByIdAndDelete(driver.userId);
+    }
+
+    await Driver.findByIdAndDelete(req.params.id);
+
+    res.status(204).json({
+        status: 'success',
+        data: null
     });
 });
 
@@ -492,7 +525,7 @@ exports.createCompanyVehicle = catchAsync(async (req, res, next) => {
         }
     });
 });
-    
+
 
 
 
@@ -524,3 +557,58 @@ exports.getCompanyVehicles = catchAsync(async (req, res, next) => {
         }
     });
 })
+
+exports.updateCompanyVehicle = catchAsync(async (req, res, next) => {
+    let vehicle = await Vehicle.findById(req.params.id);
+    if (!vehicle) {
+        return next(new appError('No vehicle found with that ID', 404));
+    }
+
+    // Check ownership if not SUPER_ADMIN
+    if (req.user.role === 'COMPANY_ADMIN') {
+        const company = await Company.findOne({ ownerId: req.user._id });
+        if (!company || String(vehicle.companyId) !== String(company._id)) {
+            return next(new appError('You do not have permission to update this vehicle', 403));
+        }
+    }
+
+    // Don't allow changing companyId via this endpoint
+    delete req.body.companyId;
+
+    const updatedVehicle = await Vehicle.findByIdAndUpdate(req.params.id, req.body, {
+        new: true,
+        runValidators: true
+    }).populate('currentDriverId');
+
+    res.status(200).json({
+        status: 'success',
+        data: {
+            vehicle: updatedVehicle
+        }
+    });
+});
+
+exports.deleteCompanyVehicle = catchAsync(async (req, res, next) => {
+    const vehicle = await Vehicle.findById(req.params.id);
+    if (!vehicle) {
+        return next(new appError('No vehicle found with that ID', 404));
+    }
+
+    // Check ownership if not SUPER_ADMIN
+    if (req.user.role === 'COMPANY_ADMIN') {
+        const company = await Company.findOne({ ownerId: req.user._id });
+        if (!company || String(vehicle.companyId) !== String(company._id)) {
+            return next(new appError('You do not have permission to delete this vehicle', 403));
+        }
+    }
+
+    await Vehicle.findByIdAndDelete(req.params.id);
+
+    // Decrement car count in company
+    await Company.findByIdAndUpdate(vehicle.companyId, { $inc: { numberOfCars: -1 } });
+
+    res.status(204).json({
+        status: 'success',
+        data: null
+    });
+});
