@@ -66,6 +66,21 @@ active: {
     type: Boolean,
     default: false
     },
+  photo: {
+    type: String,
+    default: "default.jpg"
+  },
+  emailVerified: {
+    type: Boolean,
+    default: false
+  },
+  emailVerificationToken: String,
+  emailVerificationExpires: Date,
+  verificationRequestCount: {
+    type: Number,
+    default: 0
+  },
+  lastVerificationRequest: Date,
   passwordChangedAt: Date,
   resetPasswordToken: String,
   resetPasswordExpires: Date
@@ -111,6 +126,16 @@ userSchema.methods.changedPasswordAfter = function (JWTTimestamp) {
   return false; // If no passwordChangedAt, return false
 };
 
+
+userSchema.methods.createEmailVerificationToken = function () {
+  const verificationToken = crypto.randomBytes(32).toString('hex');
+  this.emailVerificationToken = crypto
+    .createHash('sha256')
+    .update(verificationToken)
+    .digest('hex');
+  this.emailVerificationExpires = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+  return verificationToken;
+};
 
 userSchema.methods.createPasswordResetToken = function () {
   const resetToken = crypto.randomBytes(32).toString('hex'); // Generate a random token

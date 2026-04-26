@@ -9,6 +9,7 @@ const validator = require("validator");
 const path = require("path");
 const { uploadMulterFile } = require("../utils/cloudinaryUpload");
 const sendEmail = require("../utils/email");
+const { sendSMS } = require("../services/afromessage.service");
 
 const signToken = async (id) => {
   return jwt.sign({ id: id }, process.env.JWT_SECRET, {
@@ -39,25 +40,139 @@ const createSendToken = async (user, statusCode, res) => {
     },
   });
 };
-exports.signup = catchAsync(async (req, res, next) => {
-  let photoUrl = req.body.photo;
-  if (req.file) {
-    const upload = await uploadMulterFile(req.file, { folder: "users" });
-    photoUrl = upload?.secure_url;
+const sendVerificationLink = async (user) => {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  // 1) Reset count if it's a new day
+  if (!user.lastVerificationRequest || user.lastVerificationRequest < today) {
+    user.verificationRequestCount = 0;
   }
 
+  // 2) Check if limit reached
+  if (user.verificationRequestCount >= 5) {
+    throw new AppError("Maximum verification attempts (5) reached for today. Please try again tomorrow.", 429);
+  }
+
+  // Generate verification token
+  const verificationToken = user.createEmailVerificationToken();
+  
+  // 3) Update count and timestamp
+  user.verificationRequestCount += 1;
+  user.lastVerificationRequest = now;
+  
+  await user.save({ validateBeforeSave: false });
+
+  // Send verification email
+  const verifyURL = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
+  
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        .container { font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; }
+        .header { background-color: #0f172a; padding: 40px 20px; text-align: center; border-radius: 16px 16px 0 0; }
+        .content { padding: 40px 30px; line-height: 1.6; color: #334155; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 16px 16px; }
+        .button { background-color: #2563eb; color: #ffffff !important; padding: 16px 32px; text-decoration: none; border-radius: 12px; font-weight: bold; display: inline-block; margin: 30px 0; box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.2); }
+        .footer { text-align: center; padding: 20px; color: #94a3b8; font-size: 12px; }
+        .logo { color: #ffffff; font-size: 24px; font-weight: 900; letter-spacing: -1px; }
+        .logo span { color: #3b82f6; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <div class="logo">Cargo<span>Dash</span></div>
+        </div>
+        <div class="content">
+          <h2 style="color: #0f172a; margin-top: 0;">Verify Your Email Address</h2>
+          <p>Hello ${user.fullName.split(' ')[0]},</p>
+          <p>Thank you for using CargoDash. To keep your account secure, please verify your email address by clicking the button below:</p>
+          <div style="text-align: center;">
+            <a href="${verifyURL}" class="button">Verify My Email</a>
+          </div>
+          <p style="font-size: 14px; color: #64748b;">This link will expire in 24 hours. If you didn't request this, you can safely ignore this email.</p>
+          <hr style="border: none; border-top: 1px solid #f1f5f9; margin: 30px 0;" />
+          <p style="font-size: 12px; color: #94a3b8;">If you're having trouble clicking the button, copy and paste the link below into your browser:</p>
+          <p style="font-size: 12px; color: #3b82f6; word-break: break-all;">${verifyURL}</p>
+        </div>
+        <div class="footer">
+          &copy; ${new Date().getFullYear()} CargoDash Logistics. All rights reserved.
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  try {
+    await sendEmail({
+      email: user.email,
+      subject: "📧 Verify your CargoDash Email",
+      html,
+    });
+  } catch (err) {
+    console.error("Error sending verification email:", err);
+  }
+
+  // Send verification SMS
+  const smsMessage = `CargoDash: Verify your account here: ${verifyURL}`;
+  try {
+    await sendSMS({
+      to: user.phoneNumber,
+      message: smsMessage,
+    });
+  } catch (err) {
+    console.error("Error sending verification SMS:", err);
+  }
+};
+
+exports.signup = catchAsync(async (req, res, next) => {
   const normalizedRole = (req.body.role || "SHIPPER").toUpperCase();
   const newUser = await User.create({
     fullName: req.body.fullName,
     email: req.body.email,
     password: req.body.password,
     passwordConfirm: req.body.passwordConfirm,
-    photo: photoUrl || "default.jpg", // Default photo if not provided
-    phoneNumber: req.body.phoneNumber, // Add phone number field
-    // passwordChangedAt: req.body.passwordChangedAt || Date.now(),
-    role: normalizedRole, // Default role if not provided
+    phoneNumber: req.body.phoneNumber,
+    role: normalizedRole,
   });
-  return createSendToken(newUser, 200, res);
+
+  await sendVerificationLink(newUser);
+
+  res.status(201).json({
+    status: "success",
+    message: "User created. Verification link sent via email and SMS!",
+    data: {
+      user: newUser,
+    },
+  });
+});
+
+exports.verifyEmail = catchAsync(async (req, res, next) => {
+  const hashedToken = crypto
+    .createHash("sha256")
+    .update(req.params.token)
+    .digest("hex");
+
+  const user = await User.findOne({
+    emailVerificationToken: hashedToken,
+    emailVerificationExpires: { $gt: Date.now() },
+  });
+
+  if (!user) {
+    return next(new AppError("Verification token is invalid or has expired", 400));
+  }
+
+  user.emailVerified = true;
+  user.emailVerificationToken = undefined;
+  user.emailVerificationExpires = undefined;
+  await user.save({ validateBeforeSave: false });
+
+  res.status(200).json({
+    status: "success",
+    message: "Email verified successfully!",
+  });
 });
 
 exports.login = catchAsync(async (req, res, next) => {
@@ -79,14 +194,24 @@ exports.login = catchAsync(async (req, res, next) => {
     return next(new AppError("Please provide a valid email or phone number!", 400));
   }
 
-  const user = await User.findOne(query).select("+password +active");
+  const user = await User.findOne(query).select("+password +active +status +emailVerified +verificationRequestCount +lastVerificationRequest");
+  console.log(`User found: ${user?.email}, Active: ${user?.active}, Status: ${user?.status}`);
 
-  if (!user || !user.active) {
-    return next(new AppError("This account is deactivated. Please contact support.", 403));
+  if (!user || !user.active || user.status === 'SUSPENDED') {
+    let message = "This account is deactivated. Please contact support.";
+    if (user?.status === 'SUSPENDED') {
+      message = "Your account has been suspended. Please contact support.";
+    }
+    return next(new AppError(message, 403));
   }
 
   if (!(await user.correctPassword(password, user.password))) {
     return next(new AppError("Incorrect credentials", 401));
+  }
+
+  if (!user.emailVerified) {
+    await sendVerificationLink(user);
+    return next(new AppError("Your email is not verified. A new verification link has been sent to your email and phone number.", 401));
   }
 
   return createSendToken(user, 200, res);
@@ -150,14 +275,13 @@ exports.protect = catchAsync(async (req, res, next) => {
     );
   }
   // check if the current user is active
-  if (!freshUser.active) {
+  if (!freshUser.active || freshUser.status === 'SUSPENDED') {
     console.log('Fresh user:', freshUser);
-    return next(
-      new AppError(
-        "Your account is deactivated or deleted. Please contact support.",
-        403
-      )
-    );
+    let message = "Your account is deactivated or deleted. Please contact support.";
+    if (freshUser.status === 'SUSPENDED') {
+      message = "Your account has been suspended. Please contact support.";
+    }
+    return next(new AppError(message, 403));
   }
   req.user = freshUser; // Attach the user to the request object
 

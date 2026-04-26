@@ -31,7 +31,7 @@ exports.updateMe = catchAsync(async (req, res, next) => {
   }
   // 2. Filter out unwanted fields names that are not allowed to be updated
   const filteredBody = {};
-  const allowedFields = ['name', 'photo', 'status', 'phoneNumber'];
+  const allowedFields = ['fullName', 'photo', 'status', 'phoneNumber'];
   Object.keys(req.body).forEach((el) => {
     if (allowedFields.includes(el)) filteredBody[el] = req.body[el];
   });
@@ -44,7 +44,7 @@ exports.updateMe = catchAsync(async (req, res, next) => {
     new: true, // return the updated document
     runValidators: true,
   });
-  const { email, status,name, role, phoneNumber } = updatedUser;
+  const { email, status, fullName, role, phoneNumber } = updatedUser;
   const photoField = updatedUser.photo;
 
   res.status(200).json({
@@ -53,7 +53,7 @@ exports.updateMe = catchAsync(async (req, res, next) => {
       updatedUser: {
         email,
         status,
-        name,
+        fullName,
         role,
         phoneNumber,
         photo: photoField,

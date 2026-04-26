@@ -14,7 +14,8 @@ router.route("/login").post(login);
 router.route("/logout").get(authController.logout); // Route to log out user
 router.route("/forgotPassword").post(authController.forgotPassword);
 router.route("/resetPassword/:token").patch(authController.resetPassword);
-router.route("/signup").post(uploads.single("photo"), signup); 
+router.route("/signup").post(signup); 
+router.route("/verify-email/:token").get(authController.verifyEmail);
 
 // router.use(authController.protect); // Protect all routes after this middleware
 
