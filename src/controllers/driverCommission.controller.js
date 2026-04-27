@@ -1,5 +1,6 @@
 const Transaction = require('../database/models/Transaction.model');
 const Trip = require('../database/models/trip.model');
+const Driver = require('../database/models/driver.model');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
 
@@ -36,5 +37,20 @@ exports.getMyCommissionHistory = catchAsync(async (req, res, next) => {
   res.status(200).json({
     status: 'success',
     data: transactions
+  });
+});
+
+// GET /api/v1/driver/wallet
+exports.getMyWallet = catchAsync(async (req, res, next) => {
+  const driver = await Driver.findOne({ userId: req.user._id });
+  if (!driver) return next(new AppError('Driver profile not found', 404));
+
+  res.status(200).json({
+    status: 'success',
+    data: {
+      balance: driver.balance,
+      totalEarnings: driver.totalEarnings,
+      fullName: driver.fullName
+    }
   });
 });

@@ -3,6 +3,7 @@
 
 const Transaction = require('../database/models/Transaction.model');
 const Trip = require('../database/models/trip.model');
+const Driver = require('../database/models/driver.model');
 
 
 /**
@@ -32,7 +33,20 @@ async function creditDriverWallet({ trx_ref }, order, amount, platformCommission
     if (updatedTx) {
       trip.driverWalletTransaction = updatedTx._id;
       await trip.save();
-      // Optionally: update driver wallet balance here if you have such a field
+      
+      // Update driver balance and total earnings
+      if (trip.driverId) {
+        await Driver.findOneAndUpdate(
+          { userId: trip.driverId },
+          {
+            $inc: { 
+              balance: driverShare,
+              totalEarnings: driverShare 
+            }
+          }
+        );
+      }
+      
       return updatedTx;
     }
   }

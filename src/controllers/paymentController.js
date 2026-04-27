@@ -16,7 +16,7 @@ const { creditDriverWallet } = require('../services/driverWallet');
 exports.initializePayment = catchAsync(async (req, res, next) => {
   console.log("Payment Initialization Request Body:", req.body);
   const { currency, phone_number, orderId } = req.body;
-  const tx_ref = `trx_${orderId ? String(orderId) : Date.now()}`;
+  const tx_ref = `trx_${orderId}_${Date.now()}`;
   // Validate request data
   if (!currency || !phone_number || !tx_ref || !orderId) {
     return next(new appError("Missing required fields", 400));
@@ -36,9 +36,16 @@ exports.initializePayment = catchAsync(async (req, res, next) => {
   // Get weight and discount
   const weight = order.cargo?.weightKg || 0;
   const discount = order.discount || 0;
-  console.log(process.env.TEST_PAYMENT_SECRET);
-  // Calculate amount using config
-  const amount = await calculateTripAmount({ distance, weight, discount });
+  
+  // Use order's proposed budget if available, otherwise calculate
+  let amount = order.pricing?.proposedBudget;
+  
+  if (!amount) {
+    console.log("Budget not found in order, calculating based on distance/weight");
+    amount = await calculateTripAmount({ distance, weight, discount });
+  }
+
+  console.log(`Payment Initialization: Order ${orderId}, Amount: ${amount}`);
 
   try {
     const response = await axios.post(
@@ -132,13 +139,14 @@ exports.callBack = catchAsync(async (req, res, next) => {
         ref_id,
         orderId,
         companyId: order.targetCompanyId ? order.targetCompanyId : order.targetTransporterId,
+        shipperId: order.createdBy,
         commission,
         companyShare,
         driverCommission: driverShare
       });
       await Order.findOneAndUpdate(
         { _id: orderId },
-        { paymentStatus: "paid", status: "DELIVERED" },
+        { paymentStatus: "paid" },
         { new: true }
       );
       // Driver commission logic: use service function (driver gets 5% of company share by default)

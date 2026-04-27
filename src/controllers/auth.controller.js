@@ -1,6 +1,7 @@
 const catchAsync = require("../utils/catchAsync");
 const jwt = require("jsonwebtoken");
 const User = require("../database/models/user.model");
+const Driver = require("../database/models/driver.model");
 const AppError = require("../utils/appError");
 const promisify = require("util").promisify;
 const crypto = require("crypto");
@@ -9,6 +10,7 @@ const validator = require("validator");
 const path = require("path");
 const { uploadMulterFile } = require("../utils/cloudinaryUpload");
 const sendEmail = require("../utils/email");
+const getEmailTemplate = require("../utils/emailTemplate");
 const { sendSMS } = require("../services/afromessage.service");
 
 const signToken = async (id) => {
@@ -66,44 +68,16 @@ const sendVerificationLink = async (user) => {
   // Send verification email
   const verifyURL = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
   
-  const html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <style>
-        .container { font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; }
-        .header { background-color: #0f172a; padding: 40px 20px; text-align: center; border-radius: 16px 16px 0 0; }
-        .content { padding: 40px 30px; line-height: 1.6; color: #334155; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 16px 16px; }
-        .button { background-color: #2563eb; color: #ffffff !important; padding: 16px 32px; text-decoration: none; border-radius: 12px; font-weight: bold; display: inline-block; margin: 30px 0; box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.2); }
-        .footer { text-align: center; padding: 20px; color: #94a3b8; font-size: 12px; }
-        .logo { color: #ffffff; font-size: 24px; font-weight: 900; letter-spacing: -1px; }
-        .logo span { color: #3b82f6; }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <div class="logo">Cargo<span>Dash</span></div>
-        </div>
-        <div class="content">
-          <h2 style="color: #0f172a; margin-top: 0;">Verify Your Email Address</h2>
-          <p>Hello ${user.fullName.split(' ')[0]},</p>
-          <p>Thank you for using CargoDash. To keep your account secure, please verify your email address by clicking the button below:</p>
-          <div style="text-align: center;">
-            <a href="${verifyURL}" class="button">Verify My Email</a>
-          </div>
-          <p style="font-size: 14px; color: #64748b;">This link will expire in 24 hours. If you didn't request this, you can safely ignore this email.</p>
-          <hr style="border: none; border-top: 1px solid #f1f5f9; margin: 30px 0;" />
-          <p style="font-size: 12px; color: #94a3b8;">If you're having trouble clicking the button, copy and paste the link below into your browser:</p>
-          <p style="font-size: 12px; color: #3b82f6; word-break: break-all;">${verifyURL}</p>
-        </div>
-        <div class="footer">
-          &copy; ${new Date().getFullYear()} CargoDash Logistics. All rights reserved.
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
+  const html = getEmailTemplate(
+    "Verify Your Email",
+    `
+    <p style="font-size: 16px; margin-bottom: 24px;">Hello ${user.fullName.split(' ')[0]},</p>
+    <p style="font-size: 16px; margin-bottom: 24px;">Welcome to CargoDash! We're excited to have you on board. To get started and ensure your account security, please verify your email address by clicking the button below:</p>
+    `,
+    "Verify Email Address",
+    verifyURL,
+    "<strong>Note:</strong> This verification link will expire in <strong>24 hours</strong>. If you didn't create an account with CargoDash, you can safely ignore this email."
+  );
 
   try {
     await sendEmail({
@@ -139,6 +113,17 @@ exports.signup = catchAsync(async (req, res, next) => {
   });
 
   await sendVerificationLink(newUser);
+
+  // Automatically create a Driver profile if the role is DRIVER
+  if (normalizedRole === "DRIVER") {
+    await Driver.create({
+      userId: newUser._id,
+      fullName: newUser.fullName,
+      email: newUser.email,
+      phoneNumber: newUser.phoneNumber,
+      status: "ACTIVE" // You can set this to PENDING if you want manual approval
+    });
+  }
 
   res.status(201).json({
     status: "success",
@@ -316,44 +301,16 @@ exports.forgotPassword = catchAsync(async (req, res, next) => {
   //send it to user's email
   const resetURL = `${process.env.FRONTEND_URL}/resetPassword/${resetToken}`;
   
-  const html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <style>
-        .container { font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; }
-        .header { background-color: #0f172a; padding: 40px 20px; text-align: center; border-radius: 16px 16px 0 0; }
-        .content { padding: 40px 30px; line-height: 1.6; color: #334155; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 16px 16px; }
-        .button { background-color: #2563eb; color: #ffffff !important; padding: 16px 32px; text-decoration: none; border-radius: 12px; font-weight: bold; display: inline-block; margin: 30px 0; box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.2); }
-        .footer { text-align: center; padding: 20px; color: #94a3b8; font-size: 12px; }
-        .logo { color: #ffffff; font-size: 24px; font-weight: 900; letter-spacing: -1px; }
-        .logo span { color: #3b82f6; }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <div class="logo">Cargo<span>Dash</span></div>
-        </div>
-        <div class="content">
-          <h2 style="color: #0f172a; margin-top: 0;">Password Reset Request</h2>
-          <p>Hello,</p>
-          <p>We received a request to reset the password for your CargoDash account. Click the button below to set a new password. This link is valid for <strong>10 minutes</strong>.</p>
-          <div style="text-align: center;">
-            <a href="${resetURL}" class="button">Reset My Password</a>
-          </div>
-          <p style="font-size: 14px; color: #64748b;">If you didn't request this, you can safely ignore this email. Your password will remain unchanged.</p>
-          <hr style="border: none; border-top: 1px solid #f1f5f9; margin: 30px 0;" />
-          <p style="font-size: 12px; color: #94a3b8;">If you're having trouble clicking the button, copy and paste the link below into your browser:</p>
-          <p style="font-size: 12px; color: #3b82f6; word-break: break-all;">${resetURL}</p>
-        </div>
-        <div class="footer">
-          &copy; ${new Date().getFullYear()} CargoDash Logistics. All rights reserved.
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
+  const html = getEmailTemplate(
+    "Password Reset Request",
+    `
+    <p style="font-size: 16px; margin-bottom: 24px;">Hello,</p>
+    <p style="font-size: 16px; margin-bottom: 24px;">We received a request to reset the password for your CargoDash account. If you made this request, please click the button below to set a new password:</p>
+    `,
+    "Reset Password",
+    resetURL,
+    "<strong>Note:</strong> This link is only valid for <strong>10 minutes</strong>. For your security, if you did not request a password reset, please ignore this email or contact support if you have concerns."
+  );
 
   const message = `Forgot your password? Reset it here: ${resetURL}. Valid for 10 minutes.`;
 

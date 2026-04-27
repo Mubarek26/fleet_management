@@ -8,6 +8,7 @@ const transactionSchema = new mongoose.Schema({
   ref_id: { type: String },
   orderId: { type: String },
   companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company' },
+  shipperId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   commission: { type: Number, default: 0 },
   companyShare: { type: Number, default: 0 },
   driverCommission: { type: Number, default: 0 },
@@ -18,12 +19,12 @@ const transactionSchema = new mongoose.Schema({
 
 // Helper to save transaction
 transactionSchema.statics.saveTransactionToDatabase = async function (data) {
-  const { trx_ref, status, amount, ref_id, orderId, companyId, commission = 0, driverCommission = 0 } = data;
+  const { trx_ref, status, amount, ref_id, orderId, companyId, shipperId, commission = 0, driverCommission = 0 } = data;
   // Calculate company share
   const companyShare = amount - commission;
   return this.findOneAndUpdate(
     { trx_ref },
-    { status, amount, ref_id, orderId, companyId, commission, companyShare, driverCommission, updatedAt: new Date() },
+    { status, amount, ref_id, orderId, companyId, shipperId, commission, companyShare, driverCommission, updatedAt: new Date() },
     { upsert: true, new: true }
   );
 };
