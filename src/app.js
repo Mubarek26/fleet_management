@@ -1,3 +1,6 @@
+const dotenv = require("dotenv");
+dotenv.config();
+
 const pricingConfigRouter = require('./routes/pricingConfig.routes');
 const privateTransporterRouter = require('./routes/privateTransporter.routes');
 const vendorApplicationRouter = require('./routes/vendorApplication.routes');
@@ -11,13 +14,11 @@ const transactionRouter = require('./routes/transaction.routes');
 const express = require("express");
 const AppError = require("./utils/appError");
 const globalErrorHandler = require("./middleware/error.middleware");
-const dotenv = require("dotenv");
 const path = require("path");
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
 const swaggerUi = require('swagger-ui-express');
 const smsCallbackRouter = require('./controllers/sms.controller');
-dotenv.config();
 
 const swaggerSpec = require('./config/swagger');
 
