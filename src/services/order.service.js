@@ -273,15 +273,17 @@ exports.getCreatorOrders = async (user, query = {}) => {
 		throw new AppError('You must be logged in to view orders', 401);
 	}
 
-	const filter = {
-		$or: [{ createdBy: user._id }],
-	};
+	const filter = {};
 
-	if (user.role === 'COMPANY_ADMIN' && user.companyId) {
-		filter.$or.push({
-			targetCompanyId: user.companyId,
-			assignmentMode: 'DIRECT_COMPANY',
-		});
+	if (user.role !== 'SUPER_ADMIN') {
+		filter.$or = [{ createdBy: user._id }];
+
+		if (user.role === 'COMPANY_ADMIN' && user.companyId) {
+			filter.$or.push({
+				targetCompanyId: user.companyId,
+				assignmentMode: 'DIRECT_COMPANY',
+			});
+		}
 	}
 
 	const status = normalizeText(query.status)?.toUpperCase();

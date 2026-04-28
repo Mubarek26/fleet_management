@@ -59,6 +59,14 @@ const driverSchema = new mongoose.Schema(
       ref: "Vehicle",
       default: null,
     },
+    balance: {
+      type: Number,
+      default: 0,
+    },
+    totalEarnings: {
+      type: Number,
+      default: 0,
+    },
   },
   { timestamps: true }
 );

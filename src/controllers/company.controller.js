@@ -13,6 +13,7 @@ const appError = require('../utils/appError');
 const catchAsync = require('../utils/catchAsync');
 const APIFeatures = require('../utils/apiFeatures');
 const sendEmail = require('../utils/email');
+const getEmailTemplate = require('../utils/emailTemplate');
 const { sendSMS } = require('../services/afromessage.service');
 const { uploadMulterFile } = require('../utils/cloudinaryUpload');
 exports.approveUser = catchAsync(async (req, res, next) => {
@@ -34,9 +35,21 @@ exports.approveUser = catchAsync(async (req, res, next) => {
     await user.save();
     // Optionally, send email notification to the user
     try {
+        const html = getEmailTemplate(
+            'Account Approved',
+            `
+            <p style="font-size: 16px; margin-bottom: 24px;">Hello ${user.fullName.split(' ')[0]},</p>
+            <p style="font-size: 16px; margin-bottom: 24px;">Congratulations! Your account has been reviewed and approved by our administrators. You can now access all features of the CargoDash platform.</p>
+            `,
+            'Go to Dashboard',
+            process.env.FRONTEND_URL,
+            'If you have any questions, please contact our support team.'
+        );
+
         await sendEmail({
             email: user.email,
-            subject: 'Your account has been approved',
+            subject: '✅ Your CargoDash account has been approved!',
+            html,
             message: `Congratulations! Your account has been approved and is now active on our platform.`
         });
     } catch (err) {
@@ -83,10 +96,22 @@ exports.approveCompany = catchAsync(async (req, res, next) => {
         owner.status = 'ACTIVE';
         await owner.save();
 
+        const html = getEmailTemplate(
+            'Company Approved',
+            `
+            <p style="font-size: 16px; margin-bottom: 24px;">Hello ${owner.fullName.split(' ')[0]},</p>
+            <p style="font-size: 16px; margin-bottom: 24px;">Great news! Your company <strong>"${company.name}"</strong> has been approved. You can now start adding drivers and vehicles to your company profile and begin managing your logistics operations.</p>
+            `,
+            'Manage Company',
+            `${process.env.FRONTEND_URL}/dashboard`,
+            'We are excited to help you grow your logistics business with CargoDash.'
+        );
+
         try {
             await sendEmail({
                 email: owner.email,
-                subject: 'Your company has been approved',
+                subject: '🏢 Your company has been approved on CargoDash!',
+                html,
                 message: `Congratulations! Your company "${company.name}" has been approved and is now active on our platform. You can start adding drivers and vehicles to your company profile.`
             });
         } catch (err) {

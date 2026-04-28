@@ -2,6 +2,7 @@ const Contract = require('../database/models/contract.model');
 const Company = require('../database/models/company.model');
 const AppError = require('../utils/appError');
 const catchAsync = require('../utils/catchAsync');
+const Order = require('../database/models/order.model');
 
 exports.initiateContract = catchAsync(async (req, res, next) => {
 	if (!req.user?._id) {

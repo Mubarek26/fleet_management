@@ -10,5 +10,7 @@ router.use(authController.protect);
 router.get('/commission', driverCommissionController.getMyCommissionSummary);
 // GET /api/v1/driver/commission/history
 router.get('/commission/history', driverCommissionController.getMyCommissionHistory);
+// GET /api/v1/driver/wallet
+router.get('/wallet', driverCommissionController.getMyWallet);
 
 module.exports = router;
