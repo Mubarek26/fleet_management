@@ -107,6 +107,7 @@ const routesToMount = [
 	{ base: "/api/v1/tracking", modulePath: "./routes/tracking.routes", label: "tracking.routes" },
 	{ base: "/api/v1/trips", modulePath: "./routes/trip.routes", label: "trip.routes" },
 	{ base: "/api/v1/analytics", modulePath: "./routes/analytics.routes", label: "analytics.routes" },
+	{ base: "/api/v1/idle", modulePath: "./routes/idle.routes", label: "idle.routes" },
 ];
 
 

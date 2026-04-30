@@ -57,7 +57,13 @@ exports.getCompanyTrips = catchAsync(async (req, res, next) => {
 exports.getTripById = catchAsync(async (req, res, next) => {
   const trip = await Trip.findById(req.params.id)
     .populate('driverId')
-    .populate('orderId')
+    .populate({
+      path: 'orderId',
+      populate: [
+        { path: 'targetCompanyId' },
+        { path: 'createdBy' }
+      ]
+    })
     .populate('vehicleId')
     .populate('geofences');
   if (!trip) return next(new AppError('Trip not found', 404));
@@ -134,7 +140,13 @@ exports.getAllTrips = catchAsync(async (req, res, next) => {
 
   const trips = await Trip.find(filter)
     .populate('driverId')
-    .populate('orderId')
+    .populate({
+      path: 'orderId',
+      populate: [
+        { path: 'targetCompanyId' },
+        { path: 'createdBy' }
+      ]
+    })
     .populate('vehicleId')
     .populate('geofences')
     .sort({ createdAt: -1 });
