@@ -4,9 +4,9 @@ const IdleEvent = require('../database/models/idleEvent.model');
 const turf = require('@turf/turf');
 
 const DEFAULT_CRON_EXPRESSION = '*/1 * * * *'; // every 1 minute
-const IDLE_DISTANCE_THRESHOLD_METERS = 50; // increased for GPS noise
-const IDLE_TIME_THRESHOLD_MINUTES = 30;
-const MIN_POINTS_REQUIRED = 3;
+const IDLE_DISTANCE_THRESHOLD_METERS = 10; // increased for GPS noise
+const IDLE_TIME_THRESHOLD_MINUTES = 2;
+const MIN_POINTS_REQUIRED = 0;
 
 let scheduledTask = null;
 
@@ -16,11 +16,11 @@ async function detectIdleTrips() {
 		now.getTime() - IDLE_TIME_THRESHOLD_MINUTES * 60 * 1000
 	);
 
-	// Only active trips that are actually moving
+	// Only active trips that are actually moving, including vehicle details for notification
 	const trips = await Trip.find({
 		active: true,
-		milestone: 'STARTED', // IMPORTANT
-	});
+		milestone: { $in: ['STARTED', 'IN_TRANSIT'] }, // Monitor both started and in-transit trips
+	}).populate('vehicleId');
 
 	console.log(`[IdleDetection] Checking ${trips.length} active trips at ${now.toISOString()}`);
 
@@ -65,7 +65,7 @@ async function detectIdleTrips() {
 		// 🚨 IDLE DETECTED
 		if (maxDistance < IDLE_DISTANCE_THRESHOLD_METERS) {
 			if (!existingIdle) {
-				await IdleEvent.create({
+				const newIdleEvent = await IdleEvent.create({
 					tripId: trip._id,
 					driverId: trip.driverId,
 					detectedAt: now,
@@ -80,11 +80,30 @@ async function detectIdleTrips() {
 				});
 
 				trip.lastNote = `IDLE detected at ${now.toISOString()}`;
+				trip.isIdle = true;
 				await trip.save();
 
 				console.log(
 					`[IdleDetection] Trip ${trip._id} marked IDLE (maxDistance: ${maxDistance.toFixed(1)}m)`
 				);
+
+				// 🔔 SEND NOTIFICATION
+				if (trip.vehicleId && trip.vehicleId.companyId) {
+					console.log(`[IdleDetection] Triggering notification for company: ${trip.vehicleId.companyId}`);
+					const notificationService = require('../services/notification.service');
+					await notificationService.notifyCompanyAdmins(trip.vehicleId.companyId, {
+						title: '🚨 Vehicle Idle Alert',
+						message: `Vehicle ${trip.vehicleId.plateNumber} has been idle for ${IDLE_TIME_THRESHOLD_MINUTES} minutes.`,
+						type: 'IDLE_ALERT',
+						metadata: {
+							tripId: trip._id,
+							vehicleId: trip.vehicleId._id,
+							idleEventId: newIdleEvent._id
+						}
+					});
+				} else {
+					console.warn(`[IdleDetection] Skip notification: Vehicle or CompanyId missing for trip ${trip._id}`);
+				}
 			} else {
 				console.log(`[IdleDetection] Trip ${trip._id} already has unresolved idle event.`);
 			}
@@ -98,6 +117,9 @@ async function detectIdleTrips() {
 						resolvedAt: now,
 					}
 				);
+				
+				trip.isIdle = false;
+				await trip.save();
 
 				console.log(
 					`[IdleDetection] Trip ${trip._id} IDLE resolved (movement: ${maxDistance.toFixed(1)}m)`

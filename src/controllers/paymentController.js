@@ -56,7 +56,7 @@ exports.initializePayment = catchAsync(async (req, res, next) => {
         phone_number,
         tx_ref,
         callback_url: process.env.CALLBACK_URL,
-        // return_url: `${process.env.RETURN_URL}?tx_ref=${tx_ref}&order_id=${orderId}`,
+        return_url: `${process.env.RETURN_URL}?trx_ref=${tx_ref}&order_id=${orderId}`,
         customization: {
           title: "My Shop Payment",
           description: "Payment for order",
@@ -168,9 +168,11 @@ exports.callBack = catchAsync(async (req, res, next) => {
 exports.verifyPayment = catchAsync(async (req, res, next) => {
   const tx_ref =
     req.body?.tx_ref ||
-    req.body?.tx_Ref ||
+    req.body?.trx_ref ||
     req.query?.tx_ref ||
-    req.params?.tx_ref;
+    req.query?.trx_ref ||
+    req.params?.tx_ref ||
+    req.params?.trx_ref;
   console.log("Payment Request Body:", req.body);
 
   if (!tx_ref) {
@@ -185,11 +187,49 @@ exports.verifyPayment = catchAsync(async (req, res, next) => {
         },
       }
     );
+    const chapaData = response.data;
+    if (chapaData.status === "success" || chapaData.data?.status === "success") {
+      const orderId = tx_ref.split("_")[1];
+      const order = await Order.findById(orderId);
+      
+      if (order && order.paymentStatus !== 'paid') {
+        // Update order status
+        await Order.findByIdAndUpdate(orderId, { paymentStatus: 'paid' });
+        
+        // Calculate shares and credit wallets (mirroring callback logic)
+        const config = await CommissionConfig.getConfig();
+        const amount = chapaData.data?.amount || chapaData.amount;
+        const commission = amount * config.commissionRate;
+        const companyShare = amount - commission;
+        const driverShare = companyShare * config.driverCommissionRate;
+
+        // Save transaction if not exists
+        const existingTx = await Transaction.findOne({ trx_ref: tx_ref });
+        if (!existingTx) {
+          await Transaction.saveTransactionToDatabase({
+            trx_ref: tx_ref,
+            status: "success",
+            amount,
+            orderId,
+            companyId: order.targetCompanyId || order.targetTransporterId,
+            shipperId: order.createdBy,
+            commission,
+            companyShare,
+            driverCommission: driverShare
+          });
+
+          // Credit driver wallet
+          await creditDriverWallet({trx_ref: tx_ref}, order, amount, commission, config.driverCommissionRate, { status: "success" });
+        }
+      }
+    }
+
     res.status(200).json({
       status: "success",
-      data: response.data,
+      data: chapaData,
     });
   } catch (error) {
+    console.error("Verification error:", error);
     const message = error.response?.data?.message || error.message;
     return next(new appError(message, error.response?.status || 500));
   }

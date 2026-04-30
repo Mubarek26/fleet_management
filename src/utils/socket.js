@@ -14,7 +14,17 @@ let io = null;
 module.exports = {
   init: (server) => {
     io = require('socket.io')(server, {
-      cors: { origin: '*' }
+      cors: { 
+        origin: [
+          "http://localhost:5173", 
+          "http://localhost:5174", 
+          "http://127.0.0.1:5173",
+          "http://localhost:8080",
+          "https://fleet-command-center-21.vercel.app",
+          "https://cargo-gold-ten.vercel.app"
+        ],
+        credentials: true
+      }
     });
     io.on('connection', (socket) => {
       // Listen for join event to join a trip room

@@ -119,6 +119,11 @@ const tripSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Transaction',
     default: null
+  },
+
+  isIdle: {
+    type: Boolean,
+    default: false
   }
 
 }, { timestamps: true });
