@@ -94,4 +94,36 @@ router.post(
 	require('../controllers/driver.controller').streamLocation
 );
 
+// Driver initiated withdrawals
+const companyWalletController = require('../controllers/companyWallet.controller');
+router.get('/withdrawals', authController.restrictTo('DRIVER', 'SUPER_ADMIN'), companyWalletController.getDriverWithdrawals);
+router.post('/withdrawals', authController.restrictTo('DRIVER', 'SUPER_ADMIN'), companyWalletController.createWithdrawal);
+
+// Driver maintenance report (with optional photos)
+router.post(
+	'/maintenance/report',
+	authController.restrictTo('DRIVER', 'SUPER_ADMIN'),
+	upload.any(),
+	require('../controllers/maintenance.controller').reportMaintenance
+);
+
+// Driver: list my reported maintenance issues
+router.get(
+	'/maintenance',
+	authController.restrictTo('DRIVER', 'SUPER_ADMIN'),
+	require('../controllers/maintenance.controller').getMyReports
+);
+
+// GET my driver profile (includes assigned vehicle)
+router.get('/profile', authController.restrictTo('DRIVER', 'SUPER_ADMIN'), async (req, res, next) => {
+	try {
+		const Driver = require('../database/models/driver.model');
+		const driver = await Driver.findOne({ userId: req.user._id }).lean();
+		if (!driver) return res.status(404).json({ status: 'fail', message: 'Driver profile not found' });
+		res.status(200).json({ status: 'success', data: driver });
+	} catch (err) {
+		next(err);
+	}
+});
+
 module.exports = router;

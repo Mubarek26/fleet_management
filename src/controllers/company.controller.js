@@ -4,6 +4,7 @@
 const express = require('express');
 const authController = require('../controllers/auth.controller');
 const factory = require('./handlerFactory.controller'); // Import the handler factory
+const mongoose = require('mongoose');
 const Company = require('../database/models/company.model');
 const User = require('../database/models/user.model');
 const Driver = require('../database/models/driver.model');
@@ -20,6 +21,9 @@ exports.approveUser = catchAsync(async (req, res, next) => {
     // Only SUPER_ADMIN can approve
     if (!req.user || req.user.role !== 'SUPER_ADMIN') {
         return next(new appError('Only SUPER_ADMIN can approve users', 403));
+    }
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+        return next(new appError('Invalid user id', 400));
     }
     const user = await User.findById(req.params.id);
     if (!user) {
@@ -80,6 +84,9 @@ exports.approveCompany = catchAsync(async (req, res, next) => {
     // Only SUPER_ADMIN can approve
     if (!req.user || req.user.role !== 'SUPER_ADMIN') {
         return next(new appError('Only SUPER_ADMIN can approve companies', 403));
+    }
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+        return next(new appError('Invalid company id', 400));
     }
     const company = await Company.findById(req.params.id);
     if (!company) {
@@ -171,6 +178,9 @@ exports.createCompany = catchAsync(async (req, res, next) => {
 
 // get a company
 exports.getCompany = catchAsync(async (req, res, next) => {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+        return next(new appError('Invalid company id', 400));
+    }
     const company = await Company.findById(req.params.id).populate('ownerId');
 
     if (!company) {
@@ -298,6 +308,9 @@ exports.updateCompany = catchAsync(async (req, res, next) => {
         }
     }
 
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+        return next(new appError('Invalid company id', 400));
+    }
     const company = await Company.findByIdAndUpdate(req.params.id, updatePayload, {
         new: true,
         runValidators: true
@@ -315,6 +328,9 @@ exports.updateCompany = catchAsync(async (req, res, next) => {
 
 // delete a company
 exports.deleteCompany = catchAsync(async (req, res, next) => {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+        return next(new appError('Invalid company id', 400));
+    }
     const company = await Company.findByIdAndUpdate(req.params.id);
     if (!company) {
         return next(new appError('No company found with that ID', 404));
@@ -330,6 +346,9 @@ exports.deleteCompany = catchAsync(async (req, res, next) => {
 
 // Allow Company admins to add drivers to their company
 exports.addDriverToCompany = catchAsync(async (req, res, next) => {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+        return next(new appError('Invalid company id', 400));
+    }
     const company = await Company.findById(req.params.id);
     if (!company) {
         return next(new appError('No company found with that ID', 404));
@@ -414,6 +433,9 @@ exports.addDriverToCompany = catchAsync(async (req, res, next) => {
 // get company drivers
 exports.getCompanyDrivers = catchAsync(async (req, res, next) => {
     // First, find the company by ID
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+        return next(new appError('Invalid company id', 400));
+    }
     const company = await Company.findById(req.params.id);
     if (!company) {
         return next(new appError('No company found with that ID', 404));
