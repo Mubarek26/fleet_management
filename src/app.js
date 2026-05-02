@@ -90,6 +90,7 @@ const loadRouter = (modulePath, label) => {
 		return null;
 	} catch (error) {
 		console.error(`❌ Failed ${label}: ${error.message}`);
+		console.error(error.stack);
 		return null;
 	}
 };

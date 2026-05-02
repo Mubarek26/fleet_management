@@ -3,6 +3,7 @@ const Driver = require('../database/models/driver.model');
 const Vehicle = require('../database/models/vehicle.model');
 const User = require('../database/models/user.model');
 const Order = require('../database/models/order.model');
+const Company = require('../database/models/company.model');
 const AppError = require('../utils/appError');
 
 const ALLOWED_DRIVER_STATUSES = ['PENDING', 'ACTIVE', 'SUSPENDED', 'OFFLINE'];
@@ -366,4 +367,93 @@ exports.reassignVehicleForDriver = async (user, payload = {}) => {
 	await Promise.all(savePromises);
 
 	return { driver, vehicle, previousVehicle };
+};
+
+// Admin: set or unset isPrivateTransporter flag on a driver
+exports.setPrivateTransporterFlag = async (adminUser, driverId, flag) => {
+	if (!adminUser || adminUser.role !== 'SUPER_ADMIN') {
+ 		throw new AppError('Only super admins can perform this action', 403);
+ 	}
+
+ 	const normalizedDriverId = normalizeObjectId(driverId, 'driverId');
+ 	const driver = await findDriverById(normalizedDriverId);
+ 	if (!driver) throw new AppError('Driver not found', 404);
+
+ 	driver.isPrivateTransporter = !!flag;
+ 	await driver.save();
+ 	return driver;
+};
+
+// Admin: set or unset isPrivateTransporter by userId
+exports.setPrivateTransporterFlagByUser = async (adminUser, userId, flag) => {
+	if (!adminUser || adminUser.role !== 'SUPER_ADMIN') {
+		throw new AppError('Only super admins can perform this action', 403);
+	}
+
+	const driver = await Driver.findOne({ userId: normalizeObjectId(userId, 'userId') });
+	if (!driver) throw new AppError('Driver profile not found for this user', 404);
+
+	driver.isPrivateTransporter = !!flag;
+	await driver.save();
+	return driver;
+};
+
+// Admin: assign existing driver to a company
+exports.assignDriverToCompany = async (adminUser, driverId, companyId) => {
+	if (!adminUser || adminUser.role !== 'SUPER_ADMIN') {
+		throw new AppError('Only super admins can perform this action', 403);
+	}
+
+	const normalizedDriverId = normalizeObjectId(driverId, 'driverId');
+	const normalizedCompanyId = normalizeObjectId(companyId, 'companyId');
+
+	const company = await Company.findById(normalizedCompanyId);
+	if (!company || company.active === false || company.status !== 'APPROVED') {
+		throw new AppError('No active transporter company found with that companyId', 404);
+	}
+
+	const driver = await findDriverById(normalizedDriverId);
+	if (!driver) {
+		throw new AppError('Driver not found', 404);
+	}
+
+	driver.companyId = company._id;
+	await driver.save();
+
+	// Also update linked User record if present
+	if (driver.userId) {
+		await User.findByIdAndUpdate(driver.userId, { companyId: company._id });
+	}
+
+	return driver;
+};
+
+// Admin: assign existing driver to a company by userId
+exports.assignDriverToCompanyByUser = async (adminUser, userId, companyId) => {
+	if (!adminUser || adminUser.role !== 'SUPER_ADMIN') {
+		throw new AppError('Only super admins can perform this action', 403);
+	}
+
+	const normalizedCompanyId = normalizeObjectId(companyId, 'companyId');
+
+	const company = await Company.findById(normalizedCompanyId);
+	if (!company || company.active === false || company.status !== 'APPROVED') {
+		throw new AppError('No active transporter company found with that companyId', 404);
+	}
+
+	const normalizedUserId = normalizeObjectId(userId, 'userId');
+	const driver = await Driver.findOne({ userId: normalizedUserId });
+	if (!driver) {
+		throw new AppError('Driver profile not found for this user', 404);
+	}
+
+	driver.companyId = company._id;
+	await driver.save();
+
+	// Also update linked User record
+	if (driver.userId) {
+		await User.findByIdAndUpdate(driver.userId, { companyId: company._id });
+	}
+
+	return driver;
 };

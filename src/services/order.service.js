@@ -318,10 +318,10 @@ exports.getOpenMarketplaceOrders = async (user, query = {}) => {
 			throw new AppError(`Role ${user.role} is not authorized to view marketplace orders`, 403);
 		}
 
+		// Show marketplace orders regardless of their status, but exclude deleted/archived posts.
 		const filter = {
 			assignmentMode: 'OPEN_MARKETPLACE',
-			status: { $in: ['OPEN', 'REJECTED'] },
-			postStatus: { $in: ['ACTIVE', 'CANCELLED'] },
+			postStatus: { $nin: ['DELETED', 'ARCHIVED'] },
 		};
 
 		const pickupCity = normalizeText(query.pickupCity);

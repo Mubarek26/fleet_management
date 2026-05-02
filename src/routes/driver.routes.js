@@ -59,6 +59,20 @@ router.post(
 	driverController.reassignVehicleForDriver
 );
 
+// Admin: assign existing driver to a company
+router.patch(
+    '/:driverId/assign-company',
+    authController.restrictTo('SUPER_ADMIN'),
+    driverController.assignDriverToCompany
+);
+
+// Admin: assign existing driver to a company by userId
+router.patch(
+	'/by-user/:userId/assign-company',
+	authController.restrictTo('SUPER_ADMIN'),
+	driverController.assignDriverToCompanyByUser
+);
+
 // Driver order action endpoints
 router.patch(
 	'/assignments/:orderId/accept',
@@ -125,5 +139,19 @@ router.get('/profile', authController.restrictTo('DRIVER', 'SUPER_ADMIN'), async
 		next(err);
 	}
 });
+
+// Admin route to toggle private transporter flag for a driver
+router.patch(
+	'/:driverId/private-transporter',
+	authController.restrictTo('SUPER_ADMIN'),
+	require('../controllers/driver.controller').setPrivateTransporterFlag
+);
+
+// Admin: set private transporter flag by userId
+router.patch(
+	'/by-user/:userId/private-transporter',
+	authController.restrictTo('SUPER_ADMIN'),
+	require('../controllers/driver.controller').setPrivateTransporterFlagByUser
+);
 
 module.exports = router;

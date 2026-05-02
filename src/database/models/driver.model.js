@@ -67,6 +67,10 @@ const driverSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    isPrivateTransporter: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );
