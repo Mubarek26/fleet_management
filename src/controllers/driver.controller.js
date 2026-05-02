@@ -162,3 +162,55 @@ exports.reassignVehicleForDriver = catchAsync(async (req, res) => {
 		},
 	});
 });
+
+exports.setPrivateTransporterFlag = catchAsync(async (req, res) => {
+ 	const driverId = req.params.driverId;
+ 	const { isPrivateTransporter } = req.body;
+
+ 	const driver = await driverService.setPrivateTransporterFlag(req.user, driverId, isPrivateTransporter);
+
+ 	res.status(200).json({
+ 		status: 'success',
+ 		message: `Driver updated successfully`,
+ 		data: { driver },
+ 	});
+});
+
+exports.setPrivateTransporterFlagByUser = catchAsync(async (req, res) => {
+	const userId = req.params.userId;
+	const { isPrivateTransporter } = req.body;
+
+	const driver = await driverService.setPrivateTransporterFlagByUser(req.user, userId, isPrivateTransporter);
+
+	res.status(200).json({
+		status: 'success',
+		message: `Driver updated successfully`,
+		data: { driver },
+	});
+});
+
+exports.assignDriverToCompany = catchAsync(async (req, res) => {
+	const driverId = req.params.driverId;
+	const { companyId } = req.body;
+
+	const driver = await driverService.assignDriverToCompany(req.user, driverId, companyId);
+
+	res.status(200).json({
+		status: 'success',
+		message: 'Driver assigned to company successfully',
+		data: { driver },
+	});
+});
+
+exports.assignDriverToCompanyByUser = catchAsync(async (req, res) => {
+	const userId = req.params.userId;
+	const { companyId } = req.body;
+
+	const driver = await driverService.assignDriverToCompanyByUser(req.user, userId, companyId);
+
+	res.status(200).json({
+		status: 'success',
+		message: 'Driver assigned to company successfully',
+		data: { driver },
+	});
+});

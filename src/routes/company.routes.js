@@ -10,6 +10,8 @@ const requireActiveStatus = require('../middleware/requireActiveStatus.middlewar
 // Protect all routes after this middleware
 router.use(authController.protect);
 
+const companyWalletController = require('../controllers/companyWallet.controller');
+
 // Approve user (SUPER_ADMIN only)
 router.route('/users/:id/approve').put(authController.restrictTo('SUPER_ADMIN'), companyController.approveUser);
 
@@ -55,11 +57,7 @@ router
   .get(authController.restrictTo('SUPER_ADMIN'), companyController.getAllDrivers);
 
 
-router
-    .route('/:id')
-    .get(companyController.getCompany)
-    .patch(upload.single('photo'), companyController.updateCompany)
-    .delete(companyController.deleteCompany);
+
 
 router
     .route('/:id/drivers')
@@ -75,6 +73,19 @@ router
     ]),
     companyController.addDriverToCompany
   );
+// Company wallet / admin endpoints - define before the generic '/:id' route
+router.route('/drivers/wallets').get(authController.restrictTo('SUPER_ADMIN','COMPANY_ADMIN'), companyWalletController.getDriversWallets);
+router.route('/drivers/:id/transactions').get(authController.restrictTo('SUPER_ADMIN','COMPANY_ADMIN'), companyWalletController.getDriverTransactions);
+router.route('/drivers/:id/withdrawals').post(authController.restrictTo('SUPER_ADMIN','COMPANY_ADMIN'), companyWalletController.createWithdrawal);
+router.route('/withdrawals/:id/approve').patch(authController.restrictTo('SUPER_ADMIN','COMPANY_ADMIN'), companyWalletController.approveWithdrawal);
+router.route('/withdrawals').get(authController.restrictTo('SUPER_ADMIN','COMPANY_ADMIN'), companyWalletController.getWithdrawals);
+
+router
+    .route('/:id')
+    .get(companyController.getCompany)
+    .patch(upload.single('photo'), companyController.updateCompany)
+    .delete(companyController.deleteCompany);
+
 
 module.exports = router;
 

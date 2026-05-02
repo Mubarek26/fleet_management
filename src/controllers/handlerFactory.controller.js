@@ -1,8 +1,12 @@
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
 const APIFeatures = require('../utils/apiFeatures');
+const mongoose = require('mongoose');
 exports.deleteOne = (Model) =>
   catchAsync(async (req, res, next) => {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return next(new AppError('Invalid id', 400));
+    }
     const doc = await Model.findById(req.params.id);
     if (!doc) {
       return next(new AppError('No document found with that ID', 404));
@@ -33,7 +37,10 @@ exports.deleteOne = (Model) =>
   
 exports.updateOne = (Model) =>
   catchAsync(async (req, res, next) => {
-    // Load the document first to check role-based protections
+    // Validate id and load the document first to check role-based protections
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return next(new AppError('Invalid id', 400));
+    }
     const existing = await Model.findById(req.params.id).select('+password');
     if (!existing) {
       return next(new AppError('No document found with that ID', 404));
@@ -99,6 +106,9 @@ exports.createOne = (Model) =>
 
 exports.getOne = (Model, popOptions) =>
   catchAsync(async (req, res, next) => {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return next(new AppError('Invalid id', 400));
+    }
     let query = Model.findById(req.params.id);
     if (popOptions) query = query.populate(popOptions);
     const doc = await query;
