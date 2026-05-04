@@ -232,9 +232,20 @@ exports.protect = catchAsync(async (req, res, next) => {
     
   }
 
-  const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
-  if (!decoded) {
-    return next(new AppError("Invalid token! Please login again.", 401));
+  let decoded;
+  try {
+    decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
+  } catch (err) {
+    // If the token is malformed or signed with a different secret, clear cookie and return 401
+    if (err && err.name === 'JsonWebTokenError') {
+      try {
+        res.clearCookie('jwt', { path: '/' });
+      } catch (e) {
+        // ignore
+      }
+      return next(new AppError('Invalid token. Please log in again.', 401));
+    }
+    return next(new AppError('Invalid token! Please login again.', 401));
   }
   // check the user still exists
   const freshUser = await User.findById(decoded.id).select("+active");
@@ -242,6 +253,7 @@ exports.protect = catchAsync(async (req, res, next) => {
     console.log('Authorization header:', req.headers.authorization);
   if (!freshUser) {
     console.log('Token used for auth:', token);
+    try { res.clearCookie('jwt', { path: '/' }); } catch (e) {}
     return next(
       new AppError(
         "The user belonging to this token does no longer exist.",

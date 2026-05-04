@@ -13,6 +13,10 @@ router.get('/driver/mine', authController.restrictTo('DRIVER', 'PRIVATE_TRANSPOR
 
 // PATCH /api/driver/trips/:id/milestone
 
+// Lookup: search by tracking/order number or delivery contact phone
+// Example: GET /api/v1/trips/lookup?q=ORD-1234 or ?q=+251912345678
+router.get('/lookup', tripController.lookupByQuery);
+
 // Trip CRUD endpoints
 router.get('/:id', tripController.getTripById); // Get trip details
 router.get('/', tripController.getAllTrips); // List trips
