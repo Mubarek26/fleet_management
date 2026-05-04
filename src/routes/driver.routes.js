@@ -1,5 +1,6 @@
 const express = require('express');
 const authController = require('../controllers/auth.controller');
+const { requirePermissions } = require('../middleware/authorize.middleware');
 const driverController = require('../controllers/driver.controller');
 const requireActiveStatus = require('../middleware/requireActiveStatus.middleware');
 const upload = require('../middleware/uploads.middleware');
@@ -15,7 +16,7 @@ router.use(requireActiveStatus);
 // Proof of Delivery: Upload evidence (photo, signature, note)
 router.post(
 	'/trips/:id/evidence',
-	authController.restrictTo('DRIVER', 'SUPER_ADMIN'),
+	requirePermissions('trips:update'),
 	upload.single('file'), // expects multipart/form-data with 'file'
 	tripProofController.uploadProofOfDelivery
 );
@@ -23,7 +24,7 @@ router.post(
 // Proof of Delivery: Verify OTP
 router.post(
 	'/trips/:id/verify-otp',
-	authController.restrictTo('DRIVER', 'SUPER_ADMIN'),
+	requirePermissions('trips:update'),
 	tripProofController.verifyDeliveryOtp
 );
 
@@ -31,72 +32,72 @@ router.post(
 
 router.get(
 	'/assignments',
-	authController.restrictTo('DRIVER', 'SUPER_ADMIN'),
+	requirePermissions('trips:list'),
 	driverController.getMyAssignments
 );
 
 router.patch(
 	'/status',
-	authController.restrictTo('DRIVER', 'SUPER_ADMIN', 'COMPANY_ADMIN'),
+	requirePermissions('drivers:profile:update'),
 	driverController.updateMyStatus
 );
 
 router.post(
 	'/vehicles/assign',
-	authController.restrictTo('COMPANY_ADMIN', 'SUPER_ADMIN'),
+	requirePermissions('vehicles:update'),
 	driverController.assignVehicleToDriver
 );
 
 router.post(
 	'/vehicles/unassign',
-	authController.restrictTo('COMPANY_ADMIN', 'SUPER_ADMIN'),
+	requirePermissions('vehicles:update'),
 	driverController.unassignVehicleFromDriver
 );
 
 router.post(
 	'/vehicles/reassign',
-	authController.restrictTo('COMPANY_ADMIN', 'SUPER_ADMIN'),
+	requirePermissions('vehicles:update'),
 	driverController.reassignVehicleForDriver
 );
 
 // Admin: assign existing driver to a company
 router.patch(
-    '/:driverId/assign-company',
-    authController.restrictTo('SUPER_ADMIN'),
-    driverController.assignDriverToCompany
+	'/:driverId/assign-company',
+	requirePermissions('drivers:update'),
+	driverController.assignDriverToCompany
 );
 
 // Admin: assign existing driver to a company by userId
 router.patch(
 	'/by-user/:userId/assign-company',
-	authController.restrictTo('SUPER_ADMIN'),
+	requirePermissions('drivers:update'),
 	driverController.assignDriverToCompanyByUser
 );
 
 // Driver order action endpoints
 router.patch(
 	'/assignments/:orderId/accept',
-	authController.restrictTo('DRIVER', 'SUPER_ADMIN'),
+	requirePermissions('trips:update'),
 	driverController.acceptOrderAssignment
 );
 router.patch(
 	'/assignments/:orderId/reject',
-	authController.restrictTo('DRIVER', 'SUPER_ADMIN'),
+	requirePermissions('trips:update'),
 	driverController.rejectOrderAssignment
 );
 router.patch(
 	'/assignments/:orderId/start',
-	authController.restrictTo('DRIVER', 'SUPER_ADMIN', 'COMPANY_ADMIN'),
+	requirePermissions('trips:update'),
 	driverController.startOrderAssignment
 );
 router.patch(
 	'/assignments/:orderId/arrive',
-	authController.restrictTo('DRIVER', 'SUPER_ADMIN'),
+	requirePermissions('trips:update'),
 	driverController.arriveAtPickup
 );
 router.patch(
 	'/assignments/:orderId/complete',
-	authController.restrictTo('DRIVER', 'SUPER_ADMIN'),
+	requirePermissions('trips:update'),
 	driverController.completeOrderAssignment
 );
 
@@ -104,19 +105,19 @@ router.patch(
 // POST /api/driver/location - GPS streaming
 router.post(
 	'/location',
-	authController.restrictTo('DRIVER', 'SUPER_ADMIN'),
+	requirePermissions('tracking:read'),
 	require('../controllers/driver.controller').streamLocation
 );
 
 // Driver initiated withdrawals
 const companyWalletController = require('../controllers/companyWallet.controller');
-router.get('/withdrawals', authController.restrictTo('DRIVER', 'SUPER_ADMIN'), companyWalletController.getDriverWithdrawals);
-router.post('/withdrawals', authController.restrictTo('DRIVER', 'SUPER_ADMIN'), companyWalletController.createWithdrawal);
+router.get('/withdrawals', requirePermissions('drivers:withdrawals:read'), companyWalletController.getDriverWithdrawals);
+router.post('/withdrawals', requirePermissions('drivers:withdrawals:create'), companyWalletController.createWithdrawal);
 
 // Driver maintenance report (with optional photos)
 router.post(
 	'/maintenance/report',
-	authController.restrictTo('DRIVER', 'SUPER_ADMIN'),
+	requirePermissions('maintenance:create'),
 	upload.any(),
 	require('../controllers/maintenance.controller').reportMaintenance
 );
@@ -124,12 +125,12 @@ router.post(
 // Driver: list my reported maintenance issues
 router.get(
 	'/maintenance',
-	authController.restrictTo('DRIVER', 'SUPER_ADMIN'),
+	requirePermissions('maintenance:read'),
 	require('../controllers/maintenance.controller').getMyReports
 );
 
 // GET my driver profile (includes assigned vehicle)
-router.get('/profile', authController.restrictTo('DRIVER', 'SUPER_ADMIN'), async (req, res, next) => {
+router.get('/profile', requirePermissions('drivers:profile:read'), async (req, res, next) => {
 	try {
 		const Driver = require('../database/models/driver.model');
 		const driver = await Driver.findOne({ userId: req.user._id }).lean();
@@ -143,14 +144,14 @@ router.get('/profile', authController.restrictTo('DRIVER', 'SUPER_ADMIN'), async
 // Admin route to toggle private transporter flag for a driver
 router.patch(
 	'/:driverId/private-transporter',
-	authController.restrictTo('SUPER_ADMIN'),
+	requirePermissions('drivers:update'),
 	require('../controllers/driver.controller').setPrivateTransporterFlag
 );
 
 // Admin: set private transporter flag by userId
 router.patch(
 	'/by-user/:userId/private-transporter',
-	authController.restrictTo('SUPER_ADMIN'),
+	requirePermissions('drivers:update'),
 	require('../controllers/driver.controller').setPrivateTransporterFlagByUser
 );
 

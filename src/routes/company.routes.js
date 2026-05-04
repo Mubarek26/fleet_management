@@ -3,6 +3,7 @@
 const express = require('express');
 const companyController = require('../controllers/company.controller');
 const authController = require('../controllers/auth.controller');
+const { requirePermissions } = require('../middleware/authorize.middleware');
 const router = express.Router();
 const upload = require('../middleware/uploads.middleware');
 
@@ -13,7 +14,7 @@ router.use(authController.protect);
 const companyWalletController = require('../controllers/companyWallet.controller');
 
 // Approve user (SUPER_ADMIN only)
-router.route('/users/:id/approve').put(authController.restrictTo('SUPER_ADMIN'), companyController.approveUser);
+router.route('/users/:id/approve').put(requirePermissions('companies:users:approve'), companyController.approveUser);
 
 // Place approve route before /:id
 router
@@ -27,7 +28,7 @@ router
 
 router
   .route('/me')
-  .get(authController.protect, authController.restrictTo('COMPANY_ADMIN', 'SUPER_ADMIN'), companyController.getMyCompany);
+    .get(authController.protect, requirePermissions('companies:read'), companyController.getMyCompany);
 
 
 router
@@ -37,7 +38,7 @@ router
 
 router
   .route('/vehicles/all')
-  .get(authController.restrictTo('SUPER_ADMIN'), companyController.getAllVehicles);
+  .get(requirePermissions('vehicles:list'), companyController.getAllVehicles);
 
 router
   .route('/vehicles/:id')
@@ -54,7 +55,7 @@ router
 
 router
   .route('/drivers/all')
-  .get(authController.restrictTo('SUPER_ADMIN'), companyController.getAllDrivers);
+  .get(requirePermissions('drivers:list'), companyController.getAllDrivers);
 
 
 
@@ -74,11 +75,11 @@ router
     companyController.addDriverToCompany
   );
 // Company wallet / admin endpoints - define before the generic '/:id' route
-router.route('/drivers/wallets').get(authController.restrictTo('SUPER_ADMIN','COMPANY_ADMIN'), companyWalletController.getDriversWallets);
-router.route('/drivers/:id/transactions').get(authController.restrictTo('SUPER_ADMIN','COMPANY_ADMIN'), companyWalletController.getDriverTransactions);
-router.route('/drivers/:id/withdrawals').post(authController.restrictTo('SUPER_ADMIN','COMPANY_ADMIN'), companyWalletController.createWithdrawal);
-router.route('/withdrawals/:id/approve').patch(authController.restrictTo('SUPER_ADMIN','COMPANY_ADMIN'), companyWalletController.approveWithdrawal);
-router.route('/withdrawals').get(authController.restrictTo('SUPER_ADMIN','COMPANY_ADMIN'), companyWalletController.getWithdrawals);
+router.route('/drivers/wallets').get(requirePermissions('wallet:list'), companyWalletController.getDriversWallets);
+router.route('/drivers/:id/transactions').get(requirePermissions('wallet:list'), companyWalletController.getDriverTransactions);
+router.route('/drivers/:id/withdrawals').post(requirePermissions('wallet:withdraw'), companyWalletController.createWithdrawal);
+router.route('/withdrawals/:id/approve').patch(requirePermissions('wallet:approve'), companyWalletController.approveWithdrawal);
+router.route('/withdrawals').get(requirePermissions('wallet:list'), companyWalletController.getWithdrawals);
 
 router
     .route('/:id')

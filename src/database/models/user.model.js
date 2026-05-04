@@ -42,6 +42,9 @@ const userSchema = new mongoose.Schema({
     required: true
   },
 
+  // New RBAC roles relationship: optional list of Role object ids
+  roles: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Role' }],
+
   status: {
     type: String,
     enum: ["PENDING", "ACTIVE", "SUSPENDED", "REJECTED"],

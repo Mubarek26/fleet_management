@@ -3,6 +3,7 @@ const router = express.Router();
 const vendorApplicationController = require('../controllers/vendorApplication.controller');
 const upload = require('../middleware/uploads.middleware');
 const authController = require('../controllers/auth.controller');
+const { requirePermissions } = require('../middleware/authorize.middleware');
 
 // POST /api/v1/vendor/apply (protected)
 router.post('/apply', authController.protect, upload.fields([
@@ -18,12 +19,12 @@ router.get('/my-application', authController.protect, vendorApplicationControlle
 router.delete('/my-application', authController.protect, vendorApplicationController.deleteMyApplication);
 
 // Get application by ID (admin only)
-router.get('/:id', authController.protect, authController.restrictTo('SUPER_ADMIN'), vendorApplicationController.getApplicationById);
+router.get('/:id', authController.protect, requirePermissions('applications:read'), vendorApplicationController.getApplicationById);
 
 // List all applications (admin only)
-router.get('/', authController.protect, authController.restrictTo('SUPER_ADMIN'), vendorApplicationController.getAllApplications);
+router.get('/', authController.protect, requirePermissions('applications:list'), vendorApplicationController.getAllApplications);
 
 // Update application status (admin only)
-router.patch('/:id/status', authController.protect, authController.restrictTo('SUPER_ADMIN'), vendorApplicationController.updateApplicationStatus);
+router.patch('/:id/status', authController.protect, requirePermissions('applications:update'), vendorApplicationController.updateApplicationStatus);
 
 module.exports = router;

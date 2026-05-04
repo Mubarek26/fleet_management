@@ -199,7 +199,9 @@ exports.login = catchAsync(async (req, res, next) => {
     return next(new AppError("Your email is not verified. A new verification link has been sent to your email and phone number.", 401));
   }
 
-  return createSendToken(user, 200, res);
+  // Populate roles and nested permissions so the client receives effective RBAC data on login
+  const populatedUser = await User.findById(user._id).populate({ path: 'roles', populate: { path: 'permissions' } });
+  return createSendToken(populatedUser, 200, res);
 });
 
 exports.logout = catchAsync(async (req, res, next) => {
@@ -247,8 +249,10 @@ exports.protect = catchAsync(async (req, res, next) => {
     }
     return next(new AppError('Invalid token! Please login again.', 401));
   }
-  // check the user still exists
-  const freshUser = await User.findById(decoded.id).select("+active");
+  // check the user still exists and populate roles+permissions for RBAC
+  const freshUser = await User.findById(decoded.id)
+    .select("+active")
+    .populate({ path: 'roles', populate: { path: 'permissions' } });
     console.log('Cookies:', req.cookies);
     console.log('Authorization header:', req.headers.authorization);
   if (!freshUser) {
@@ -280,7 +284,10 @@ exports.protect = catchAsync(async (req, res, next) => {
     }
     return next(new AppError(message, 403));
   }
-  req.user = freshUser; // Attach the user to the request object
+  // Attach the populated user to the request object
+  req.user = freshUser;
+  // mark that roles/permissions are already populated to avoid re-population
+  req.user._rolesPopulated = true;
 
   next();
 });

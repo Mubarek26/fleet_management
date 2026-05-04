@@ -6,6 +6,7 @@ const privateTransporterController = require('../controllers/privateTransporter.
 const upload = require('../middleware/uploads.middleware');
 
 const authController = require('../controllers/auth.controller');
+const { requirePermissions } = require('../middleware/authorize.middleware');
 // POST /api/private-transporter/apply (protected)
 router.post('/apply', authController.protect, upload.fields([
   { name: 'driversLicenseImage', maxCount: 1 },
@@ -21,15 +22,15 @@ router.get('/my-application', authController.protect, privateTransporterControll
 router.delete('/my-application', authController.protect, privateTransporterController.deleteMyApplication);
 
 // Get application by ID (admin only)
-router.get('/:id', authController.protect, authController.restrictTo('SUPER_ADMIN'), privateTransporterController.getApplicationById);
+router.get('/:id', authController.protect, requirePermissions('applications:read'), privateTransporterController.getApplicationById);
 
 // List all applications (admin only)
-router.get('/', authController.protect, authController.restrictTo('SUPER_ADMIN'), privateTransporterController.getAllApplications);
+router.get('/', authController.protect, requirePermissions('applications:list'), privateTransporterController.getAllApplications);
 
 // Update application status (admin only)
-router.patch('/:id/status', authController.protect, authController.restrictTo('SUPER_ADMIN'), privateTransporterController.updateApplicationStatus);
+router.patch('/:id/status', authController.protect, requirePermissions('applications:update'), privateTransporterController.updateApplicationStatus);
 
 // Assign driver to company (admin only)
-router.post('/:id/assign-company', authController.protect, authController.restrictTo('SUPER_ADMIN'), privateTransporterController.assignToCompany);
+router.post('/:id/assign-company', authController.protect, requirePermissions('applications:assign'), privateTransporterController.assignToCompany);
 
 module.exports = router;
