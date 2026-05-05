@@ -32,13 +32,15 @@ router.route("/deleteMe").delete(authController.protect, userControllers.deleteM
 // router.use(authController.restrictTo("super admin"));
 
 
-router.route("/").get(authController.protect, getAllUsers);
+const { requirePermissions } = require('../middleware/authorize.middleware');
+
+router.route("/").get(authController.protect, requirePermissions('users:list'), getAllUsers);
 
 router.get('/check-auth', authController.protect, (req, res) => {
   res.json({ status: 'ok', user: req.user });
 });
 
 
-router.route("/:id").get(authController.protect, getUser).patch(authController.protect, updateUsers).delete(authController.protect, deleteUsers);
+router.route("/:id").get(authController.protect, requirePermissions('users:read'), getUser).patch(authController.protect, requirePermissions('users:update'), updateUsers).delete(authController.protect, requirePermissions('users:delete'), deleteUsers);
 
 module.exports = router;

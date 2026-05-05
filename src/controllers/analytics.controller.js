@@ -215,3 +215,119 @@ exports.getDashboardStats = catchAsync(async (req, res, next) => {
         }
     });
 });
+
+// Overview endpoint used by frontend analytics dashboard
+exports.getOverview = catchAsync(async (req, res, next) => {
+    const { start, end } = req.query;
+    let startDate = start ? new Date(start) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    let endDate = end ? new Date(end) : new Date();
+    // ensure endDate includes entire day
+    endDate.setHours(23,59,59,999);
+
+    // Role-based filter
+    let filter = { createdAt: { $gte: startDate, $lte: endDate } };
+    let companyId = req.user.companyId;
+    if (req.user.role === 'COMPANY_ADMIN' && !companyId) {
+        const company = await Company.findOne({ ownerId: req.user._id });
+        if (company) companyId = company._id;
+    }
+
+    if (req.user.role === 'COMPANY_ADMIN') {
+        filter.$or = [
+            { targetCompanyId: companyId },
+            { createdBy: req.user._id }
+        ];
+    } else if (req.user.role === 'VENDOR' || req.user.role === 'SHIPPER') {
+        filter.createdBy = req.user._id;
+    }
+
+    const totalTrips = await Order.countDocuments(filter);
+    const delivered = await Order.countDocuments({ ...filter, status: { $in: ['DELIVERED', 'COMPLETED'] } });
+    const failed = await Order.countDocuments({ ...filter, status: { $in: ['CANCELLED', 'REJECTED'] } });
+
+    // Average delivery time in minutes (createdAt -> updatedAt for delivered/completed)
+    const avgAgg = await Order.aggregate([
+        { $match: { ...filter, status: { $in: ['DELIVERED', 'COMPLETED'] } } },
+        { $project: { diffMinutes: { $divide: [{ $subtract: ['$updatedAt', '$createdAt'] }, 60000] } } },
+        { $group: { _id: null, avgMinutes: { $avg: '$diffMinutes' } } }
+    ]);
+    const avgDeliveryTime = avgAgg.length ? Math.round(avgAgg[0].avgMinutes) : null;
+
+    // Recent orders/trips list
+    const recentOrders = await Order.find(filter)
+        .sort({ createdAt: -1 })
+        .limit(20)
+        .populate('createdBy', 'fullName')
+        .lean();
+
+    const recent = recentOrders.map(o => ({
+        _id: o._id,
+        orderNumber: o.orderNumber,
+        status: o.status,
+        createdAt: o.createdAt,
+        updatedAt: o.updatedAt,
+        deliveryTimeMinutes: (o.status === 'DELIVERED' || o.status === 'COMPLETED') && o.updatedAt ? Math.round((new Date(o.updatedAt) - new Date(o.createdAt)) / 60000) : null,
+        customer: o.createdBy ? o.createdBy.fullName : null
+    }));
+
+    res.status(200).json({
+        status: 'success',
+        data: {
+            totalTrips,
+            delivered,
+            failed,
+            avgDeliveryTime,
+            recent
+        }
+    });
+});
+
+// Export CSV for analytics
+exports.exportOverview = catchAsync(async (req, res, next) => {
+    const { start, end } = req.query;
+    let startDate = start ? new Date(start) : new Date(0);
+    let endDate = end ? new Date(end) : new Date();
+    endDate.setHours(23,59,59,999);
+
+    let filter = { createdAt: { $gte: startDate, $lte: endDate } };
+    let companyId = req.user.companyId;
+    if (req.user.role === 'COMPANY_ADMIN' && !companyId) {
+        const company = await Company.findOne({ ownerId: req.user._id });
+        if (company) companyId = company._id;
+    }
+
+    if (req.user.role === 'COMPANY_ADMIN') {
+        filter.$or = [
+            { targetCompanyId: companyId },
+            { createdBy: req.user._id }
+        ];
+    } else if (req.user.role === 'VENDOR' || req.user.role === 'SHIPPER') {
+        filter.createdBy = req.user._id;
+    }
+
+    const orders = await Order.find(filter).populate('createdBy', 'fullName').lean();
+
+    // Build CSV
+    const headers = [
+        'orderNumber', 'status', 'createdAt', 'updatedAt', 'deliveryTimeMinutes', 'customer', 'targetCompanyId'
+    ];
+
+    const rows = orders.map(o => {
+        const deliveryTime = (o.status === 'DELIVERED' || o.status === 'COMPLETED') && o.updatedAt ? Math.round((new Date(o.updatedAt) - new Date(o.createdAt)) / 60000) : '';
+        return [
+            o.orderNumber || '',
+            o.status || '',
+            o.createdAt ? new Date(o.createdAt).toISOString() : '',
+            o.updatedAt ? new Date(o.updatedAt).toISOString() : '',
+            deliveryTime,
+            o.createdBy ? o.createdBy.fullName : '',
+            o.targetCompanyId ? String(o.targetCompanyId) : ''
+        ].map(v => (v === null || v === undefined) ? '' : String(v).replace(/\r?\n|\r/g, ' '));
+    });
+
+    const csvLines = [headers.join(','), ...rows.map(r => r.map(cell => `"${cell.replace(/"/g, '""')}"`).join(','))].join('\n');
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="analytics-${startDate.toISOString().slice(0,10)}-${endDate.toISOString().slice(0,10)}.csv"`);
+    res.status(200).send(csvLines);
+});

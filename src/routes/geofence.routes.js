@@ -3,6 +3,7 @@ const geofenceController = require('../controllers/geofence.controller');
 const authController = require('../controllers/auth.controller');
 
 const router = express.Router();
+const { requirePermissions } = require('../middleware/authorize.middleware');
 
 router.use(authController.protect);
 
@@ -10,7 +11,7 @@ router.get('/by-trip/:tripId', geofenceController.getGeofencesByTrip);
 
 router.post(
   '/', 
-  authController.restrictTo('SUPER_ADMIN', 'COMPANY_ADMIN'),
+  requirePermissions('geofence:create'),
   geofenceController.createGeofence
 );
 
@@ -20,13 +21,13 @@ router.get('/:id', geofenceController.getGeofence);
 
 router.put(
   '/:id', 
-  authController.restrictTo('SUPER_ADMIN', 'COMPANY_ADMIN'),
+  requirePermissions('geofence:update'),
   geofenceController.updateGeofence
 );
 
 router.delete(
   '/:id', 
-  authController.restrictTo('SUPER_ADMIN', 'COMPANY_ADMIN'),
+  requirePermissions('geofence:delete'),
   geofenceController.deleteGeofence
 );
 

@@ -3,32 +3,33 @@ const authController = require('../controllers/auth.controller');
 const brokerController = require('../controllers/broker.controller');
 
 const router = express.Router();
+const { requirePermissions } = require('../middleware/authorize.middleware');
 
 router.get(
 	'/match/:orderId',
 	authController.protect,
-	authController.restrictTo('BROKER', 'SUPER_ADMIN','COMPANY_ADMIN','VENDOR','SHIPPER'),
+	requirePermissions('broker:read'),
 	brokerController.matchOrder
 );
 
 router.post(
 	'/assign',
 	authController.protect,
-	authController.restrictTo('BROKER', 'SUPER_ADMIN','COMPANY_ADMIN'),
+	requirePermissions('broker:update'),
 	brokerController.assignOrder
 );
 
 router.post(
 	'/orders/:orderId/assign-vehicle',
 	authController.protect,
-	authController.restrictTo('BROKER', 'SUPER_ADMIN','COMPANY_ADMIN'),
+	requirePermissions('broker:update'),
 	brokerController.assignVehicle
 );
 
 router.put(
 	'/orders/:id/validate',
 	authController.protect,
-	authController.restrictTo('BROKER', 'SUPER_ADMIN','COMPANY_ADMIN','VENDOR','SHIPPER'),
+	requirePermissions('broker:update'),
 	brokerController.validateOrder
 );
 

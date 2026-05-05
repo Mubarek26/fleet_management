@@ -4,7 +4,7 @@ const Trip = require('../database/models/trip.model');
 const Order = require('../database/models/order.model');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
-
+const { sendSMS } = require('../services/afromessage.service');
 
 // GET /api/v1/trips/company
 exports.getCompanyTrips = catchAsync(async (req, res, next) => {
@@ -258,7 +258,78 @@ exports.getTripTracking = catchAsync(async (req, res, next) => {
 });
 
 
-const { sendSMS } = require('../services/afromessage.service');
+// GET /api/v1/trips/lookup?q=<orderNumber|phone>
+exports.lookupByQuery = catchAsync(async (req, res, next) => {
+  const q = (req.query.q || '').trim();
+  if (!q) return next(new AppError('Query parameter `q` is required', 400));
+
+  let order = null;
+
+  // Try exact orderNumber lookup first
+  order = await Order.findOne({ orderNumber: q });
+
+  // If not found, try matching delivery phone (exact match)
+  if (!order) {
+    order = await Order.findOne({ 'deliveryLocation.contactPhone': q });
+  }
+
+  // Fallback: digits-only phone match
+  if (!order) {
+    const digits = q.replace(/\D/g, '');
+    if (digits) {
+      order = await Order.findOne({ 'deliveryLocation.contactPhone': digits });
+    }
+  }
+
+  if (!order) return next(new AppError('Order not found', 404));
+
+  // Find the most recent trip for this order and populate related data
+  const trip = await Trip.findOne({ orderId: order._id })
+    .sort({ createdAt: -1 })
+    .populate('driverId')
+    .populate('vehicleId')
+    .populate({
+      path: 'orderId',
+      populate: [
+        { path: 'createdBy' },
+        { path: 'targetCompanyId' }
+      ]
+    });
+
+  if (!trip) {
+    return res.status(200).json({
+      status: 'success',
+      message: 'Order found but no associated trip',
+      data: { order }
+    });
+  }
+
+  res.status(200).json({
+    status: 'success',
+    data: {
+      order: {
+        _id: order._id,
+        orderNumber: order.orderNumber,
+        deliveryLocation: order.deliveryLocation,
+        status: order.status,
+        createdBy: trip.orderId && trip.orderId.createdBy ? trip.orderId.createdBy : undefined
+      },
+      trip: {
+        _id: trip._id,
+        location: trip.location,
+        locationHistory: trip.locationHistory,
+        milestone: trip.milestone,
+        createdAt: trip.createdAt,
+        driver: trip.driverId || null,
+        vehicle: trip.vehicleId || null,
+        lastNote: trip.lastNote || null,
+        milestoneHistory: trip.milestoneHistory || []
+      }
+    }
+  });
+});
+
+
 
 // PATCH /api/driver/trips/:id/milestone
 exports.updateMilestone = catchAsync(async (req, res, next) => {

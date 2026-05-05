@@ -3,6 +3,7 @@
 const path = require('path');
 const mongoose = require('mongoose');
 const ensureSuperAdmin = require('./seedSuperAdmin');
+const ensureRolesAndPermissions = require('./seedRolesPermissions');
 require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 
 
@@ -40,6 +41,9 @@ const connectDB = async () => {
 
     if (typeof ensureSuperAdmin === 'function') {
       await ensureSuperAdmin();
+    }
+    if (typeof ensureRolesAndPermissions === 'function') {
+      await ensureRolesAndPermissions();
     }
 
     console.log(`✅ MongoDB connected for env '${envName}'.`);

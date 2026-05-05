@@ -199,7 +199,9 @@ exports.login = catchAsync(async (req, res, next) => {
     return next(new AppError("Your email is not verified. A new verification link has been sent to your email and phone number.", 401));
   }
 
-  return createSendToken(user, 200, res);
+  // Populate roles and nested permissions so the client receives effective RBAC data on login
+  const populatedUser = await User.findById(user._id).populate({ path: 'roles', populate: { path: 'permissions' } });
+  return createSendToken(populatedUser, 200, res);
 });
 
 exports.logout = catchAsync(async (req, res, next) => {
@@ -232,16 +234,30 @@ exports.protect = catchAsync(async (req, res, next) => {
     
   }
 
-  const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
-  if (!decoded) {
-    return next(new AppError("Invalid token! Please login again.", 401));
+  let decoded;
+  try {
+    decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
+  } catch (err) {
+    // If the token is malformed or signed with a different secret, clear cookie and return 401
+    if (err && err.name === 'JsonWebTokenError') {
+      try {
+        res.clearCookie('jwt', { path: '/' });
+      } catch (e) {
+        // ignore
+      }
+      return next(new AppError('Invalid token. Please log in again.', 401));
+    }
+    return next(new AppError('Invalid token! Please login again.', 401));
   }
-  // check the user still exists
-  const freshUser = await User.findById(decoded.id).select("+active");
+  // check the user still exists and populate roles+permissions for RBAC
+  const freshUser = await User.findById(decoded.id)
+    .select("+active")
+    .populate({ path: 'roles', populate: { path: 'permissions' } });
     console.log('Cookies:', req.cookies);
     console.log('Authorization header:', req.headers.authorization);
   if (!freshUser) {
     console.log('Token used for auth:', token);
+    try { res.clearCookie('jwt', { path: '/' }); } catch (e) {}
     return next(
       new AppError(
         "The user belonging to this token does no longer exist.",
@@ -268,7 +284,10 @@ exports.protect = catchAsync(async (req, res, next) => {
     }
     return next(new AppError(message, 403));
   }
-  req.user = freshUser; // Attach the user to the request object
+  // Attach the populated user to the request object
+  req.user = freshUser;
+  // mark that roles/permissions are already populated to avoid re-population
+  req.user._rolesPopulated = true;
 
   next();
 });
