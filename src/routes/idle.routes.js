@@ -9,6 +9,6 @@ const router = express.Router();
 router.use(authController.protect);
 
 router.get('/', requirePermissions('idle:read'), idleController.getAllIdleEvents);
-router.patch('/:id/resolve', requirePermissions('idle:manage'), idleController.resolveIdleEvent);
+router.patch('/:id/resolve', requirePermissions('idle:resolve'), idleController.resolveIdleEvent);
 
 module.exports = router;
