@@ -55,6 +55,8 @@ const allowedOrigins = Array.from(new Set([
 	"http://localhost:8080",
 	"http://localhost:5173",
 	"http://localhost:5174",
+	"http://localhost:19007",
+	"http://localhost:19006",
 	"http://127.0.0.1:5173",
 	"https://fleet-management-kzif.onrender.com",
 	"https://fleet-management-kzif.onrender.com/api/v1",
