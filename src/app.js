@@ -115,6 +115,7 @@ const routesToMount = [
 	{ base: "/api/v1/fleet/maintenance", modulePath: "./routes/maintenance.routes", label: "maintenance.routes" },
 
 	{ base: "/api/v1/idle", modulePath: "./routes/idle.routes", label: "idle.routes" },
+	{ base: "/api/v1/chat", modulePath: "./routes/chat.routes", label: "chat.routes" },
 ];
 
 

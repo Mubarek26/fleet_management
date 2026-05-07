@@ -35,6 +35,30 @@ module.exports = {
       socket.on('leave', (room) => {
         socket.leave(room);
       });
+
+      // Join a chat conversation room
+      socket.on('join-chat', (conversationId) => {
+        socket.join(`chat_${conversationId}`);
+      });
+
+      // Leave a chat conversation room
+      socket.on('leave-chat', (conversationId) => {
+        socket.leave(`chat_${conversationId}`);
+      });
+
+      // Join user-specific room for notifications
+      socket.on('join-user', (userId) => {
+        socket.join(`user_${userId}`);
+      });
+
+      // Handle typing indicator
+      socket.on('typing', ({ conversationId, userId, userName, isTyping }) => {
+        socket.to(`chat_${conversationId}`).emit('typing', {
+          userId,
+          userName,
+          isTyping
+        });
+      });
     });
     return io;
   },

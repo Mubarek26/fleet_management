@@ -7,6 +7,7 @@ const orderService = require('./order.service');
 const Trip = require('../database/models/trip.model');
 const Geofence = require('../database/models/Geofence.model');
 const AppError = require('../utils/appError');
+const chatService = require('./chat.service');
 
 const ALLOWED_PROPOSER_ROLES = ['COMPANY_ADMIN', 'PRIVATE_TRANSPORTER', 'DRIVER'];
 
@@ -286,6 +287,27 @@ exports.submitProposal = async (user, orderId, payload = {}) => {
 		estimatedPickupDate,
 		vehicleDetails: normalizeText(payload.vehicleDetails),
 	});
+
+	// Auto-create chat conversation between proposer and order creator
+	try {
+		const conversation = await chatService.createConversation(order._id, [user._id, order.createdBy]);
+		
+		// Send initial system message
+		await chatService.sendMessage(
+			conversation._id,
+			user._id,
+			`Proposal submitted: ${finalProposedPrice} ${normalizeText(payload.currency)?.toUpperCase() || order.pricing?.currency || 'ETB'}`,
+			'SYSTEM',
+			{ proposalId: proposal._id, type: 'PROPOSAL_SUBMITTED' }
+		);
+
+		// If there was a custom message, send it as a text message
+		if (payload.message) {
+			await chatService.sendMessage(conversation._id, user._id, payload.message);
+		}
+	} catch (err) {
+		console.error('Failed to create conversation for proposal:', err.message);
+	}
 
 	return populateProposalQuery(OrderProposal.findById(proposal._id));
 };
