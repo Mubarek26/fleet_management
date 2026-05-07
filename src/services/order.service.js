@@ -9,6 +9,7 @@ const AppError = require('../utils/appError');
 const Vehicle = require('../database/models/vehicle.model');
 const Trip = require('../database/models/trip.model');
 const Geofence = require('../database/models/Geofence.model');
+const chatService = require('./chat.service');
 
 exports.assignOrder = async (orderId, driverId, vehicleId) => {
 	if (!orderId || !driverId || !vehicleId) {
@@ -502,6 +503,31 @@ exports.createMarketplaceOrder = async (user, payload = {}) => {
 		specialInstructions: normalizeText(payload.specialInstructions),
 	});
 	console.log('[OrderCreate] created order status:', order.status, 'assignmentMode:', order.assignmentMode, 'orderNumber:', order.orderNumber);
+
+	// Auto-create chat conversation for direct orders
+	try {
+		if (assignmentMode === 'DIRECT_COMPANY' && targetCompany) {
+			const conversation = await chatService.createConversation(order._id, [user._id, targetCompany.ownerId]);
+			await chatService.sendMessage(
+				conversation._id,
+				user._id,
+				`Direct order created for your company: ${order.orderNumber}`,
+				'SYSTEM',
+				{ orderId: order._id, type: 'DIRECT_ORDER_CREATED' }
+			);
+		} else if (assignmentMode === 'DIRECT_PRIVATE_TRANSPORTER' && targetTransporter) {
+			const conversation = await chatService.createConversation(order._id, [user._id, targetTransporter._id]);
+			await chatService.sendMessage(
+				conversation._id,
+				user._id,
+				`Direct order created for you: ${order.orderNumber}`,
+				'SYSTEM',
+				{ orderId: order._id, type: 'DIRECT_ORDER_CREATED' }
+			);
+		}
+	} catch (err) {
+		console.error('Failed to create conversation for direct order:', err.message);
+	}
 
 	try {
 		const autoValidationResult = await brokerService.autoValidateOrderIfEligible(order._id, {
