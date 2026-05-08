@@ -28,7 +28,7 @@ router
 
 router
   .route('/me')
-    .get(authController.protect, requirePermissions('companies:read'), companyController.getMyCompany);
+    .get(authController.protect, companyController.getMyCompany);
 
 
 router
