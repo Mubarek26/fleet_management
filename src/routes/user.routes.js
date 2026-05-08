@@ -36,9 +36,28 @@ const { requirePermissions } = require('../middleware/authorize.middleware');
 
 router.route("/").get(authController.protect, requirePermissions('users:list'), getAllUsers);
 
-router.get('/check-auth', authController.protect, (req, res) => {
-  res.json({ status: 'ok', user: req.user });
+router.get('/check-auth', authController.protect, async (req, res) => {
+  const user = req.user.toObject ? req.user.toObject() : req.user;
+  
+  // If the user is a DRIVER, lookup their driver profile to get isPrivateTransporter flag
+  if (String(user.role || '').toUpperCase() === 'DRIVER') {
+    const Driver = require('../database/models/driver.model');
+    const driverProfile = await Driver.findOne({ 
+      $or: [
+        { userId: user._id },
+        { email: user.email },
+        { phoneNumber: user.phoneNumber }
+      ]
+    }).select('isPrivateTransporter');
+    
+    if (driverProfile) {
+      user.isPrivateTransporter = !!driverProfile.isPrivateTransporter;
+    }
+  }
+
+  res.json({ status: 'ok', user });
 });
+
 
 
 router.route("/:id").get(authController.protect, requirePermissions('users:read'), getUser).patch(authController.protect, requirePermissions('users:update'), updateUsers).delete(authController.protect, requirePermissions('users:delete'), deleteUsers);

@@ -22,7 +22,7 @@ router.get('/my-application', authController.protect, privateTransporterControll
 router.delete('/my-application', authController.protect, privateTransporterController.deleteMyApplication);
 
 // Get application by ID (admin only)
-router.get('/:id', authController.protect, requirePermissions('applications:read'), privateTransporterController.getApplicationById);
+router.get('/:id', authController.protect, privateTransporterController.getApplicationById);
 
 // List all applications (admin only)
 router.get('/', authController.protect, requirePermissions('applications:list'), privateTransporterController.getAllApplications);
