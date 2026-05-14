@@ -199,7 +199,18 @@ exports.getConversationByOrder = async (orderId, user, otherParticipantId = null
         query = { orderId, participants: userId };
     }
 
-    return await Conversation.findOne(query)
+    let conversation = await Conversation.findOne(query)
         .populate('orderId', 'orderNumber title status')
         .populate('participants', 'fullName photo role');
+
+    // Create if it doesn't exist and we have an other participant
+    if (!conversation && otherParticipantId && !isSuperAdmin) {
+        conversation = await this.createConversation(orderId, [userId, otherParticipantId]);
+        // Populate after creation
+        conversation = await Conversation.findById(conversation._id)
+            .populate('orderId', 'orderNumber title status')
+            .populate('participants', 'fullName photo role');
+    }
+
+    return conversation;
 };

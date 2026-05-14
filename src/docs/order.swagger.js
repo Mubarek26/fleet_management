@@ -186,10 +186,10 @@
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
-             401:
-                 description: Unauthorized
-             403:
-                 description: User role is not allowed to create marketplace orders
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: User role is not allowed to create marketplace orders
  */
 
 /**
