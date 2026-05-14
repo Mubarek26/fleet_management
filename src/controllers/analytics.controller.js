@@ -90,14 +90,22 @@ exports.getDashboardStats = catchAsync(async (req, res, next) => {
     }
 
     if (req.user.role === 'COMPANY_ADMIN') {
+        if (!companyId) return next(new AppError('No company found for this admin', 404));
+        const cId = new mongoose.Types.ObjectId(companyId);
         filter.$or = [
-            { targetCompanyId: companyId },
+            { targetCompanyId: cId },
             { createdBy: req.user._id }
         ];
     } else if (req.user.role === 'VENDOR' || req.user.role === 'SHIPPER') {
         filter.createdBy = req.user._id;
     } else if (req.user.role === 'SUPER_ADMIN') {
-        // No additional role filter for Super Admin
+        if (req.query.companyId && mongoose.Types.ObjectId.isValid(req.query.companyId)) {
+            const cId = new mongoose.Types.ObjectId(req.query.companyId);
+            filter.$or = [
+                { targetCompanyId: cId },
+                { createdBy: cId }
+            ];
+        }
     }
 
     // 3. Fetch Stats
@@ -147,7 +155,9 @@ exports.getDashboardStats = catchAsync(async (req, res, next) => {
     // Fleet utilization (if company admin or super admin)
     let fleetUtilization = 0;
     if (req.user.role === 'SUPER_ADMIN' || req.user.role === 'COMPANY_ADMIN') {
-        const vehicleQuery = req.user.role === 'SUPER_ADMIN' ? {} : { companyId };
+        const vehicleQuery = req.user.role === 'SUPER_ADMIN' 
+            ? (req.query.companyId && mongoose.Types.ObjectId.isValid(req.query.companyId) ? { companyId: new mongoose.Types.ObjectId(req.query.companyId) } : {}) 
+            : { companyId };
         const totalVehicles = await Vehicle.countDocuments(vehicleQuery);
         const activeVehicles = await Vehicle.countDocuments({ ...vehicleQuery, status: 'ACTIVE' });
         fleetUtilization = totalVehicles > 0 ? Math.round((activeVehicles / totalVehicles) * 100) : 0;
@@ -176,7 +186,51 @@ exports.getDashboardStats = catchAsync(async (req, res, next) => {
         { $sort: { "_id": 1 } }
     ]);
 
-    // 5. Recent Orders
+    // 6. Carrier Distribution (Group by target company)
+    const carrierDistribution = await Order.aggregate([
+        { $match: filter },
+        {
+            $group: {
+                _id: '$targetCompanyId',
+                count: { $sum: 1 }
+            }
+        },
+        {
+            $lookup: {
+                from: 'companies',
+                localField: '_id',
+                foreignField: '_id',
+                as: 'company'
+            }
+        },
+        {
+            $project: {
+                name: { $ifNull: [{ $arrayElemAt: ['$company.companyName', 0] }, 'Independent/Marketplace'] },
+                value: '$count'
+            }
+        }
+    ]);
+
+    // 7. Geographic Performance (Group by delivery city)
+    const geoPerformance = await Order.aggregate([
+        { $match: filter },
+        {
+            $group: {
+                _id: '$deliveryLocation.city',
+                value: { $sum: 1 }
+            }
+        },
+        { $sort: { value: -1 } },
+        { $limit: 10 },
+        {
+            $project: {
+                name: { $ifNull: ['$_id', 'Unknown'] },
+                value: 1
+            }
+        }
+    ]);
+
+    // 8. Recent Orders
     const recentOrders = await Order.find(filter)
         .sort({ createdAt: -1 })
         .limit(5)
@@ -211,41 +265,44 @@ exports.getDashboardStats = catchAsync(async (req, res, next) => {
                 status: order.status.toLowerCase(),
                 createdAt: order.createdAt,
                 customer: order.createdBy ? order.createdBy.fullName : 'Unknown'
-            }))
+            })),
+            carrierDistribution,
+            geoPerformance
         }
     });
 });
 
 // Overview endpoint used by frontend analytics dashboard
 exports.getOverview = catchAsync(async (req, res, next) => {
-    const { start, end } = req.query;
+    const { start, end, companyId: queryCompanyId } = req.query;
     let startDate = start ? new Date(start) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     let endDate = end ? new Date(end) : new Date();
-    // ensure endDate includes entire day
     endDate.setHours(23,59,59,999);
 
-    // Role-based filter
     let filter = { createdAt: { $gte: startDate, $lte: endDate } };
-    let companyId = req.user.companyId;
-    if (req.user.role === 'COMPANY_ADMIN' && !companyId) {
-        const company = await Company.findOne({ ownerId: req.user._id });
-        if (company) companyId = company._id;
-    }
-
+    
     if (req.user.role === 'COMPANY_ADMIN') {
+        let companyId = req.user.companyId;
+        if (!companyId) {
+            const company = await Company.findOne({ ownerId: req.user._id });
+            if (company) companyId = company._id;
+        }
+        if (!companyId) return next(new AppError('No company found for this admin', 404));
+        const cId = new mongoose.Types.ObjectId(companyId);
         filter.$or = [
-            { targetCompanyId: companyId },
+            { targetCompanyId: cId },
             { createdBy: req.user._id }
         ];
     } else if (req.user.role === 'VENDOR' || req.user.role === 'SHIPPER') {
         filter.createdBy = req.user._id;
+    } else if (req.user.role === 'SUPER_ADMIN' && queryCompanyId && mongoose.Types.ObjectId.isValid(queryCompanyId)) {
+        filter.targetCompanyId = new mongoose.Types.ObjectId(queryCompanyId);
     }
 
     const totalTrips = await Order.countDocuments(filter);
     const delivered = await Order.countDocuments({ ...filter, status: { $in: ['DELIVERED', 'COMPLETED'] } });
     const failed = await Order.countDocuments({ ...filter, status: { $in: ['CANCELLED', 'REJECTED'] } });
 
-    // Average delivery time in minutes (createdAt -> updatedAt for delivered/completed)
     const avgAgg = await Order.aggregate([
         { $match: { ...filter, status: { $in: ['DELIVERED', 'COMPLETED'] } } },
         { $project: { diffMinutes: { $divide: [{ $subtract: ['$updatedAt', '$createdAt'] }, 60000] } } },
@@ -253,7 +310,6 @@ exports.getOverview = catchAsync(async (req, res, next) => {
     ]);
     const avgDeliveryTime = avgAgg.length ? Math.round(avgAgg[0].avgMinutes) : null;
 
-    // Recent orders/trips list
     const recentOrders = await Order.find(filter)
         .sort({ createdAt: -1 })
         .limit(20)
@@ -284,30 +340,33 @@ exports.getOverview = catchAsync(async (req, res, next) => {
 
 // Export CSV for analytics
 exports.exportOverview = catchAsync(async (req, res, next) => {
-    const { start, end } = req.query;
+    const { start, end, companyId: queryCompanyId } = req.query;
     let startDate = start ? new Date(start) : new Date(0);
     let endDate = end ? new Date(end) : new Date();
     endDate.setHours(23,59,59,999);
 
     let filter = { createdAt: { $gte: startDate, $lte: endDate } };
-    let companyId = req.user.companyId;
-    if (req.user.role === 'COMPANY_ADMIN' && !companyId) {
-        const company = await Company.findOne({ ownerId: req.user._id });
-        if (company) companyId = company._id;
-    }
-
+    
     if (req.user.role === 'COMPANY_ADMIN') {
+        let companyId = req.user.companyId;
+        if (!companyId) {
+            const company = await Company.findOne({ ownerId: req.user._id });
+            if (company) companyId = company._id;
+        }
+        if (!companyId) return next(new AppError('No company found for this admin', 404));
+        const cId = new mongoose.Types.ObjectId(companyId);
         filter.$or = [
-            { targetCompanyId: companyId },
+            { targetCompanyId: cId },
             { createdBy: req.user._id }
         ];
     } else if (req.user.role === 'VENDOR' || req.user.role === 'SHIPPER') {
         filter.createdBy = req.user._id;
+    } else if (req.user.role === 'SUPER_ADMIN' && queryCompanyId && mongoose.Types.ObjectId.isValid(queryCompanyId)) {
+        filter.targetCompanyId = new mongoose.Types.ObjectId(queryCompanyId);
     }
 
     const orders = await Order.find(filter).populate('createdBy', 'fullName').lean();
 
-    // Build CSV
     const headers = [
         'orderNumber', 'status', 'createdAt', 'updatedAt', 'deliveryTimeMinutes', 'customer', 'targetCompanyId'
     ];

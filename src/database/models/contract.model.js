@@ -34,6 +34,12 @@ const contractSchema = new mongoose.Schema(
 			enum: ['PENDING', 'ACCEPTED', 'REJECTED', 'CANCELLED', 'TERMINATED'],
 			default: 'PENDING',
 		},
+		initiatedBy: {
+			type: String,
+			enum: ['VENDOR', 'COMPANY_ADMIN'],
+			required: true,
+			default: 'VENDOR'
+		}
 	},
 	{ timestamps: true }
 );

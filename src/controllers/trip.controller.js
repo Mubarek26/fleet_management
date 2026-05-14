@@ -110,6 +110,18 @@ exports.getAllTrips = catchAsync(async (req, res, next) => {
     // Super admin sees everything (no additional filter)
     delete filter.active; // Optional: maybe super admin sees inactive too
     filter.active = { $ne: false };
+
+    // Allow SUPER_ADMIN to filter trips by company via query param `companyId`
+    // Example: GET /api/v1/trips?companyId=<companyId>
+    if (req.query.companyId) {
+      const companyId = req.query.companyId;
+      if (mongoose.Types.ObjectId.isValid(companyId)) {
+        const Order = require('../database/models/order.model');
+        const companyOrders = await Order.find({ targetCompanyId: companyId }).select('_id');
+        const orderIds = companyOrders.map(o => o._id);
+        filter.orderId = { $in: orderIds };
+      }
+    }
   }
 
   // Handle delayed filter
