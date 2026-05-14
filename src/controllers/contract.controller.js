@@ -216,23 +216,22 @@ exports.getCompanyContracts = catchAsync(async (req, res, next) => {
 		return next(new AppError('Only company admins can view incoming partnership requests', 403));
 	}
 
-	let companyId = req.user.companyId;
-
-	if (!companyId) {
-		const ownedCompany = await Company.findOne({ ownerId: req.user._id }).select('_id');
-		companyId = ownedCompany?._id;
-	}
-
-	if (!companyId && req.user.role !== 'COMPANY_ADMIN') {
-		return next(new AppError('Authenticated user is not linked to a company', 400));
-	}
-
 	const filter = {};
 
-	if (req.user.role !== 'COMPANY_ADMIN') {
+	if (req.user.role === 'COMPANY_ADMIN') {
+		// Company Admins are strictly scoped to their own company
+		let companyId = req.user.companyId;
+		if (!companyId) {
+			const ownedCompany = await Company.findOne({ ownerId: req.user._id }).select('_id');
+			companyId = ownedCompany?._id;
+		}
+		if (!companyId) return next(new AppError('Authenticated user is not linked to a company', 400));
 		filter.transporterCompanyId = companyId;
-	} else if (req.query.companyId) {
-		filter.transporterCompanyId = req.query.companyId;
+	} else if (req.user.role === 'SUPER_ADMIN') {
+		// Super Admins see everything, but can optionally filter by companyId
+		if (req.query.companyId) {
+			filter.transporterCompanyId = req.query.companyId;
+		}
 	}
 
 	if (req.query.status) {
